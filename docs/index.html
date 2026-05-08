@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Regime-Aware GBWM with RL — Midterm Proposal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+
+<script type="application/json" id="speaker-notes">
+[
+"Good morning everyone. My name is Yavhé Sergio Enrique Orozco Valle, from the Semiconductors Technology program. For this midterm proposal, I want to present my final project idea for the course Foundations of Reinforcement Learning with Applications in Finance. The project is called Regime-Aware Goal-Based Wealth Management with Reinforcement Learning. In simple words, I want to build an RL agent that helps make investment decisions, not just to make more money, but to reach a specific financial goal while managing risk. For example: saving for retirement, saving for university, buying a house, or reaching a target amount of money in a certain number of years. The key idea is: instead of asking, 'How can I maximize return?', we ask, 'How can I maximize the probability of reaching my goal safely?'",
+
+"The problem I want to focus on is that traditional investment models often focus on maximizing return or optimizing risk and return. But in real life, most people do not think like that. A normal person does not usually say, 'I want to maximize my Sharpe ratio.' They say something like: I want to have enough money to retire. I want to save enough money to buy a house. I want to pay for my child's education. I want to avoid running out of money. So the real problem is not only about making the highest possible return. The real problem is making good decisions over time so that a person can reach a financial target while avoiding dangerous losses. A good analogy is GPS navigation. A trading bot is like saying: 'Drive as fast as possible.' But goal-based wealth management is like saying: 'Help me arrive at my destination safely, even if the road changes.' That is why I think this is a more realistic and useful financial RL problem.",
+
+"The main paper I want to base this project on is 'G-Learner and GIRL: Goal Based Wealth Management with Reinforcement Learning' by Matthew Dixon and Igor Halperin. This paper is a strong fit because it is not just about stock trading. It focuses on goal-based wealth management. That means the investor has a target, contributes money over time, may withdraw money later, and can rebalance the portfolio. The paper proposes an algorithm called G-Learner. A simple way to explain G-Learner is this: it is similar to Q-learning, but with a probabilistic and more stable structure for noisy financial data. Finance is very noisy. Prices move randomly. Returns are uncertain. The future is never guaranteed. So this paper is useful because it tries to solve a realistic financial decision problem under uncertainty.",
+
+"This project fits the course very directly. The course is about reinforcement learning, but not in a generic way. It is specifically about reinforcement learning with applications in finance. The project can be formulated as a Markov Decision Process. We have a state, an action, a reward, and a transition. The financial side is also very connected to the course because this is a dynamic portfolio allocation problem. The agent must decide how to allocate money over time. This connects to stochastic control because the agent is making decisions under uncertainty. It also connects to approximate dynamic programming and reinforcement learning because the problem becomes too large to solve manually when we add realistic states, market noise, and long time horizons. So this project is not outside the course. It is basically taking the core ideas of the course and applying them to a concrete financial decision problem.",
+
+"The core of the project is the MDP formulation. The state represents the current situation of the investor: how much wealth they currently have, how much time is left, what target they want to reach, and how far they are from the goal. The action is the decision the agent makes — for example, the agent can choose a conservative portfolio, a balanced portfolio, or an aggressive portfolio. The reward tells the agent whether the decision was good or bad. If the agent moves closer to the financial goal, it receives a positive reward. If the agent falls behind the goal, takes too much risk, or changes the portfolio too often, it receives a penalty. The transition describes what happens after the decision: the market changes, the wealth changes, and the investor moves to the next time step. A simple analogy is a video game: the player is the investor, the level is the financial timeline, the score is progress toward the goal, the enemy is uncertainty, and the strategy is the portfolio decision.",
+
+"The original paper gives a strong foundation, but I do not want to only reproduce the paper. My extension is to make the agent regime-aware. The reason is simple: markets do not always behave the same way. Sometimes the market is growing. Sometimes it is falling. Sometimes it is unstable and volatile. A strategy that works during a calm market may fail during a crisis. So I want the RL agent to know something about the current market regime. For example, if the market is bullish, the agent may take more risk. If the market is bearish or highly volatile, the agent may become more conservative. The analogy here is weather. If you are driving and the weather is sunny, you can drive normally. But if there is heavy rain, you should slow down and change your behavior. A non-regime-aware agent drives the same way in every weather condition. A regime-aware agent adapts. That is the main technical improvement I want to test.",
+
+"One question is: why not just build a trading bot? Honestly, because trading bots are dangerous as class projects. They look exciting, but many of them are weak academically. It is easy to overfit a trading bot to historical data. It is also easy to get lucky results and pretend the model is good. But that does not prove that reinforcement learning is solving a meaningful problem. This project is stronger because it has a clear objective. The question is not: 'Can I make money in backtesting?' The question is: 'Can an RL agent improve the probability of reaching a financial goal while controlling downside risk?' That is much easier to explain, evaluate, and defend. Also, this project has real-life meaning. A person saving for retirement does not care only about beating the market. They care about not failing their goal. That makes this project more realistic and more useful.",
+
+"I considered other options. Deep Hedging is very impressive. It deals with hedging derivatives under realistic market frictions. But for a six-week project, it may become too complex, especially because it requires deeper knowledge of derivatives, hedging, transaction costs, and simulation. Deep Optimal Stopping is also interesting. It connects to American options and stopping problems. But its use case is narrower. FinRL is useful because it gives ready-made tools for financial reinforcement learning, but it may look too much like using a framework instead of building a clear research project. That is why I think goal-based wealth management is the best option. It is realistic, explainable, aligned with the course, and still technically meaningful. It gives us a strong paper to reproduce and a clear extension to add. So the project is ambitious, but not unrealistic. That balance is important.",
+
+"The project will use Python as the main programming language. For data and simulation, I will use NumPy and pandas. For deep learning and RL, I can use PyTorch and possibly Stable-Baselines3. I also want to build the problem as a Gymnasium-style environment. That means the environment will have a standard structure: reset, step, state, action, reward, and done. This is useful because it makes the project clean and easier to test. The core algorithms are connected to the course. The foundation is MDPs and dynamic programming. The main paper uses G-learning, which is connected to Q-learning. For the extension, I may compare with PPO, which is a policy-gradient method. The main financial concept is portfolio rebalancing. The agent must decide how much money to allocate to different assets over time. The final output will not only be code. It will include charts, comparisons, and interpretation of the learned policy.",
+
+"A very important part of this project is evaluation. If I only measure return, the project becomes too shallow. So I want to measure the things that matter for a goal-based investor. The first metric is the probability of reaching the financial goal — for example, if the target is one million dollars after thirty years, how often does the strategy reach that target? The second metric is shortfall risk: if the strategy fails, how badly does it fail? The third metric is terminal wealth distribution. Instead of only showing one final number, I want to show the range of possible outcomes. I also want to measure maximum drawdown, because large losses are psychologically and financially dangerous. Portfolio turnover is also important because changing positions too often creates transaction costs. Finally, I want to compare behavior across market regimes. The question is: does the regime-aware agent actually behave differently when the market changes? If yes, that would make the extension meaningful.",
+
+"This project has several real-life use cases. One clear use case is robo-advising. A robo-advisor could use this type of model to recommend portfolio decisions based on a user's goal, time horizon, and risk situation. Another use case is retirement planning. Instead of using a fixed strategy for everyone, the system could adapt based on market conditions and the person's progress toward their goal. It could also be used for target-date funds. These are funds that automatically adjust their risk as the target date gets closer. A reinforcement learning approach could make that adjustment more dynamic. Another use case is a personal finance app. Imagine an app that does not just track spending, but also tells the user: You are falling behind your goal. You should reduce risk. You can afford to be more aggressive. The market regime has changed, so your strategy should adapt. That makes the project useful beyond the classroom.",
+
+"The project timeline is realistic. In week one, I will read the main paper deeply and reproduce the basic setup. In week two, I will build a clean MDP environment. This is important because the environment is the foundation of the whole project. In week three, I will implement simple baselines, such as fixed allocation, buy-and-hold, and possibly a simple dynamic programming baseline. In week four, I will work on the RL agent. The main focus will be reproducing the logic of the G-Learner paper. In week five, I will add the regime-aware extension. This means adding market regime information into the state and testing whether the agent changes behavior. In week six, I will focus on evaluation, charts, results, and the final report. The final deliverable will include code, experiments, comparison plots, and a final explanation of what worked and what did not.",
+
+"The final goal is to answer one main question: Can a reinforcement learning agent improve goal-based financial planning by adapting portfolio decisions to changing market regimes? The expected result is not just a trading demo. It is an experimental framework. I want to show the original method, the baselines, the extension, and the comparison. Even if the regime-aware method does not always win, the project can still be valuable. Because the important part is to analyze when it helps, when it fails, and why. That is what makes it a research-style project. The final project should show that I understand the course concepts, that I can implement them, and that I can connect them to a realistic financial decision problem.",
+
+"To conclude, I believe this is a strong project because it has a good balance. It is not too simple, but it is also not unrealistic. It is connected to the course topics: MDPs, dynamic programming, reinforcement learning, stochastic control, and portfolio management. It is based on a real paper, but it also gives space for a meaningful extension. The real-life motivation is also clear. People do not invest only to maximize return. They invest to reach goals. So the project is about building an RL agent that can make better long-term financial decisions under uncertainty. That is why I propose Regime-Aware Goal-Based Wealth Management with Reinforcement Learning as my final project. Thank you."
+]
+</script>
+
+<style>
+  /* Tiny extras specific to this file */
+  .ribbon {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 40px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04) 50%, transparent);
+    pointer-events: none;
+  }
+</style>
+</head>
+
+<body>
+
+<deck-stage>
+
+<!-- ============================================================
+     SLIDE 1 — TITLE
+============================================================ -->
+<section class="slide dark s-title" data-screen-label="01 Title">
+  <canvas class="particles" id="particles-1"></canvas>
+
+  <div class="chrome">
+    <div class="row top">
+      <span>CME 241 · Stanford</span>
+      <span>Midterm Proposal · 2026</span>
+    </div>
+    <div class="row bot">
+      <span>Yavhé Sergio Enrique Orozco Valle <span class="dot"></span> Semiconductors Technology</span>
+      <span>01 / 14</span>
+    </div>
+  </div>
+
+  <div style="position:relative; z-index:5; margin-top: 80px;">
+    <div class="eyebrow" style="margin-bottom: 36px;">A Reinforcement Learning Proposal · 15 minutes</div>
+    <h1 class="hero-title">
+      <span class="grad">Regime-Aware</span><br/>
+      <span style="font-style: italic; font-family: var(--font-display); font-weight: 400;">goal-based</span> wealth<br/>
+      management with RL.
+    </h1>
+  </div>
+
+  <div class="meta" style="position:relative; z-index:5; margin-top: auto; padding-bottom: 80px;">
+    <div><div>PRESENTER</div><strong>Yavhé Sergio Enrique Orozco Valle</strong></div>
+    <div><div>PROGRAM</div><strong>Semiconductors Technology</strong></div>
+    <div><div>COURSE</div><strong>Foundations of RL × Finance</strong></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 2 — THE REAL PROBLEM
+============================================================ -->
+<section class="slide light s-problem" data-screen-label="02 The Problem">
+  <div class="chrome">
+    <div class="row top"><span>02 · The problem</span><span>People don't invest for returns</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>02 / 14</span></div>
+  </div>
+
+  <div>
+    <div class="eyebrow" style="margin-bottom: 36px;">02 — The problem</div>
+    <h1>
+      People don't invest for <span class="em">returns.</span><br/>
+      They invest to <span class="em2">arrive somewhere.</span>
+    </h1>
+    <p class="ask">
+      Retirement. A house. A child's education. An emergency fund. Financial independence.
+      A normal investor never says <em>"maximize my Sharpe ratio."</em> They say <strong>"don't fail my goal."</strong>
+    </p>
+  </div>
+
+  <div class="gps-card">
+    <svg viewBox="0 0 600 600" preserveAspectRatio="xMidYMid meet" id="gps-svg-2"></svg>
+    <div class="lbl" style="position:relative; z-index:2;">Analogy</div>
+    <div class="ttl" style="position:relative; z-index:2;">A trading bot drives fast.<br/>A goal-based agent is GPS — it arrives.</div>
+    <div class="legend">
+      <span><i style="background: #fafaf7"></i>start</span>
+      <span><i style="background: var(--accent-goal)"></i>safe path</span>
+      <span><i style="background: rgba(220,90,60,0.7)"></i>reckless path</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 3 — MAIN PAPER
+============================================================ -->
+<section class="slide light s-paper" data-screen-label="03 Main Paper">
+  <div class="chrome">
+    <div class="row top"><span>03 · Anchor paper</span><span>Dixon &amp; Halperin · 2020</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>03 / 14</span></div>
+  </div>
+
+  <div class="paper-card">
+    <div class="stamp">arXiv : 2002.10990</div>
+    <div class="auth" style="margin-bottom: 16px;">M. DIXON &amp; I. HALPERIN · 2020</div>
+    <h3>G-Learner<br/>and GIRL.</h3>
+    <div class="auth">Goal-Based Wealth Management with Reinforcement Learning</div>
+    <p class="abstract">
+      Applies RL to goal-based wealth management — retirement plans, target-date
+      funds, periodic contributions, withdrawals, and rebalancing.
+      Proposes <strong>G-Learner</strong>: a probabilistic extension of Q-learning
+      built for the noisy reality of financial data.
+    </p>
+    <div class="pull">
+      <span>· G-learning</span><span>· Q-learning family</span><span>· Noisy finance</span><span>· Goal attainment</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="eyebrow" style="margin-bottom: 28px;">03 — One paper. One extension.</div>
+    <h2>Anchored, not<br/><span class="serif">improvised.</span></h2>
+    <p class="lede">
+      The whole project sits on a single, well-cited paper.
+      A faithful replication first; then one controlled, defensible extension on top.
+      That is a research project — not a demo.
+    </p>
+    <div class="tags">
+      <span class="tag">Replication</span>
+      <span class="tag">Probabilistic Q</span>
+      <span class="tag">Long-horizon</span>
+      <span class="tag">Defensible</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 4 — COURSE FIT
+============================================================ -->
+<section class="slide light s-course" data-screen-label="04 Course Fit">
+  <div class="chrome">
+    <div class="row top"><span>04 · Course alignment</span><span>CME 241 — Foundations of RL × Finance</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>04 / 14</span></div>
+  </div>
+
+  <div class="head">
+    <div>
+      <div class="eyebrow" style="margin-bottom: 28px;">04 — Why this fits</div>
+      <h2>Squarely<br/>inside CME&nbsp;241.</h2>
+    </div>
+    <p class="lede">
+      The course explicitly maps RL theory onto financial control problems.
+      This project lives at the intersection of all three pillars — not at the edge.
+    </p>
+  </div>
+
+  <div class="course-cols">
+    <div class="col">
+      <div class="num">PILLAR 01</div>
+      <h3>MDPs &amp; Planning</h3>
+      <ul>
+        <li>Markov processes</li>
+        <li>Dynamic programming</li>
+        <li>Approximate DP</li>
+        <li>Bellman optimality</li>
+      </ul>
+    </div>
+    <div class="col">
+      <div class="num">PILLAR 02</div>
+      <h3>Finance Control</h3>
+      <ul>
+        <li>Portfolio management</li>
+        <li>Stochastic control</li>
+        <li>Derivatives hedging</li>
+        <li>Order-book trading</li>
+      </ul>
+    </div>
+    <div class="col">
+      <div class="num">PILLAR 03</div>
+      <h3>RL Algorithms</h3>
+      <ul>
+        <li>Monte Carlo</li>
+        <li>Temporal Difference</li>
+        <li>Batch RL</li>
+        <li>Policy Gradient · PPO</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 5 — MDP LOOP
+============================================================ -->
+<section class="slide dark s-mdp" data-screen-label="05 MDP Formulation">
+  <div class="chrome">
+    <div class="row top"><span>05 · MDP formulation</span><span>State · Action · Reward · Transition</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>05 / 14</span></div>
+  </div>
+
+  <div class="head">
+    <div class="eyebrow" style="margin-bottom: 28px; color: #8a8a85;">05 — The clean MDP</div>
+    <h2>Explainable.<br/>Defensible. <span class="serif" style="color:#fafaf7;">A loop.</span></h2>
+    <p class="lede">Every decision the agent ever makes lives inside this cycle.</p>
+  </div>
+
+  <div class="mdp-stage">
+    <svg id="mdp-svg" class="mdp-svg" viewBox="0 0 1920 700"></svg>
+  </div>
+
+  <div class="mdp-legend">
+    <div class="item"><div class="lbl">State · sₜ</div><div class="val">wealth · time left · <span class="em">target gap</span> · regime probabilities</div></div>
+    <div class="item"><div class="lbl">Action · aₜ</div><div class="val">conservative · balanced · <span class="em">aggressive</span></div></div>
+    <div class="item"><div class="lbl">Market</div><div class="val">stochastic returns &amp; periodic contributions</div></div>
+    <div class="item"><div class="lbl">Reward · rₜ</div><div class="val"><span class="em">+goal progress</span> − shortfall − risk penalty</div></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 6 — REGIME EXTENSION
+============================================================ -->
+<section class="slide dark s-regime" data-screen-label="06 Regime Extension">
+  <div class="chrome">
+    <div class="row top"><span>06 · The extension</span><span>Bauman et al. 2024 · PMLR 233</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>06 / 14</span></div>
+  </div>
+
+  <div>
+    <div class="eyebrow" style="margin-bottom: 28px; color: #8a8a85;">06 — The extension</div>
+    <h2>A strategy shouldn't drive the same way<br/>in every <span class="em">market weather.</span></h2>
+    <p class="lede">Regime probabilities enter the state. The policy stops being stationary.</p>
+  </div>
+
+  <div class="regime-grid">
+    <div class="regime-card bull">
+      <div class="top"><div><div class="name">Bull</div><div class="desc">growth · risk-on</div></div><div class="prob" style="color: #3aa974;">P̂ 0.42</div></div>
+      <div class="viz" data-regime="bull"></div>
+      <div class="behav">Agent leans into equities. Adds risk because the trend rewards it.</div>
+    </div>
+    <div class="regime-card bear">
+      <div class="top"><div><div class="name">Bear</div><div class="desc">decline · defensive</div></div><div class="prob" style="color: #d05a3e;">P̂ 0.18</div></div>
+      <div class="viz" data-regime="bear"></div>
+      <div class="behav">Agent hedges. Prioritizes capital preservation over chasing return.</div>
+    </div>
+    <div class="regime-card high">
+      <div class="top"><div><div class="name">High-vol</div><div class="desc">unstable · risk-off</div></div><div class="prob" style="color: #d4a01e;">P̂ 0.21</div></div>
+      <div class="viz" data-regime="high"></div>
+      <div class="behav">Agent reduces turnover. Avoids decisions amplified by noise.</div>
+    </div>
+    <div class="regime-card stab">
+      <div class="top"><div><div class="name">Stable</div><div class="desc">normal · balanced</div></div><div class="prob" style="color: #5c84d4;">P̂ 0.19</div></div>
+      <div class="viz" data-regime="stab"></div>
+      <div class="behav">Agent rebalances toward the long-term glide path.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 7 — TRADING BOT vs GPS
+============================================================ -->
+<section class="slide light s-bot" data-screen-label="07 Trading Bot vs GPS">
+  <div class="chrome">
+    <div class="row top"><span>07 · Why not a trading bot?</span><span>Defensible &gt; flashy</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>07 / 14</span></div>
+  </div>
+
+  <h2>Trading bots look exciting.<br/>They are <span class="em">weak projects.</span></h2>
+
+  <div class="bot-vs">
+    <div class="bot-side bad">
+      <div class="lbl">Trading bot</div>
+      <h3>"Make more money."</h3>
+      <div class="sub">Drives as fast as possible.</div>
+      <div class="map">
+        <svg style="width:100%; height:100%;" id="bot-bad"></svg>
+      </div>
+      <ul>
+        <li>Easy to overfit history</li>
+        <li>"Maximize return" is a weak objective</li>
+        <li>Lucky backtests aren't proof</li>
+        <li>Hard to defend academically</li>
+      </ul>
+    </div>
+    <div class="bot-side good">
+      <div class="lbl">Goal-based RL</div>
+      <h3>"Reach the goal safely."</h3>
+      <div class="sub">Recalculates the route.</div>
+      <div class="map">
+        <svg style="width:100%; height:100%;" id="bot-good"></svg>
+      </div>
+      <ul>
+        <li>Clear, falsifiable objective</li>
+        <li>Honest evaluation: probability of success</li>
+        <li>Real-life relevance</li>
+        <li>Defendable claim, not a backtest</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 8 — PAPER COMPARISON
+============================================================ -->
+<section class="slide light s-options" data-screen-label="08 Why This Paper">
+  <div class="chrome">
+    <div class="row top"><span>08 · Why this paper</span><span>Out of four serious candidates</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>08 / 14</span></div>
+  </div>
+
+  <div class="head">
+    <div>
+      <div class="eyebrow" style="margin-bottom: 28px;">08 — Considered alternatives</div>
+      <h2>Picked for balance,<br/>not for hype.</h2>
+    </div>
+    <p class="lede">
+      Course fit · feasibility in six weeks · room for one meaningful extension.
+      Goal-Based RL is the option that wins on every axis.
+    </p>
+  </div>
+
+  <div class="options-table">
+    <div class="opt-row">
+      <div class="idx">A · 01</div>
+      <div class="name">Deep Hedging</div>
+      <div class="pro">Powerful, but derivatives-heavy: transaction costs, market impact, liquidity, risk limits. Too dense for six weeks.</div>
+      <div class="verdict">Too complex</div>
+    </div>
+    <div class="opt-row">
+      <div class="idx">A · 02</div>
+      <div class="name">Deep Optimal Stopping</div>
+      <div class="pro">Mathematically elegant. Connects to American options and stopping problems — but the use case is narrow.</div>
+      <div class="verdict">Narrow</div>
+    </div>
+    <div class="opt-row">
+      <div class="idx">A · 03</div>
+      <div class="name">FinRL trading framework</div>
+      <div class="pro">Easier to demo, plenty of templates — but feels like calling a framework, not building research.</div>
+      <div class="verdict">Less original</div>
+    </div>
+    <div class="opt-row chosen">
+      <div class="idx">A · 04</div>
+      <div class="name">Goal-Based Wealth RL</div>
+      <div class="pro">Realistic, explainable, course-aligned. Strong base paper plus a clear extension. Ambitious — not unrealistic.</div>
+      <div class="verdict">Chosen</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 9 — STACK
+============================================================ -->
+<section class="slide dark s-stack" data-screen-label="09 Stack">
+  <div class="chrome">
+    <div class="row top"><span>09 · Stack &amp; algorithms</span><span>Code is half — research is the other half</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>09 / 14</span></div>
+  </div>
+
+  <h2>Built like a <span class="em">controlled experiment</span> —<br/>not a notebook.</h2>
+
+  <div class="stack-grid">
+    <div class="stack-col">
+      <div class="lbl">RL · Finance theory</div>
+      <div class="stack-item"><div class="num">01</div><div class="name">Markov Decision Processes</div><div class="role">Foundation</div></div>
+      <div class="stack-item"><div class="num">02</div><div class="name">Dynamic Programming</div><div class="role">Baseline</div></div>
+      <div class="stack-item"><div class="num">03</div><div class="name">Q-learning · G-learning</div><div class="role">Main agent</div></div>
+      <div class="stack-item"><div class="num">04</div><div class="name">Policy Gradient · PPO</div><div class="role">Extension</div></div>
+      <div class="stack-item"><div class="num">05</div><div class="name">Risk-aware reward design</div><div class="role">Reward shaping</div></div>
+      <div class="stack-item"><div class="num">06</div><div class="name">Portfolio rebalancing</div><div class="role">Action space</div></div>
+    </div>
+    <div class="stack-col">
+      <div class="lbl">Implementation stack</div>
+      <div class="stack-item"><div class="num">.py</div><div class="name">Python · Jupyter</div><div class="role">Language</div></div>
+      <div class="stack-item"><div class="num">.np</div><div class="name">NumPy · pandas</div><div class="role">Sim &amp; data</div></div>
+      <div class="stack-item"><div class="num">.pt</div><div class="name">PyTorch</div><div class="role">Deep RL</div></div>
+      <div class="stack-item"><div class="num">.gym</div><div class="name">Gymnasium env API</div><div class="role">Environment</div></div>
+      <div class="stack-item"><div class="num">.sb3</div><div class="name">Stable-Baselines3</div><div class="role">PPO</div></div>
+      <div class="stack-item"><div class="num">.viz</div><div class="name">Matplotlib · Plotly</div><div class="role">Charts</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 10 — EVALUATION
+============================================================ -->
+<section class="slide light s-eval" data-screen-label="10 Evaluation">
+  <div class="chrome">
+    <div class="row top"><span>10 · Evaluation</span><span>Metrics that match the goal</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>10 / 14</span></div>
+  </div>
+
+  <h2>Higher return is <em style="font-style: normal; color: var(--muted);">not</em> the<br/>question. <span class="em">Reaching the goal</span> is.</h2>
+
+  <div class="eval-grid">
+    <div class="eval-cell">
+      <div class="top"><div class="lbl">Metric · 01</div></div>
+      <h3>Goal attainment</h3>
+      <div class="viz">
+        <svg viewBox="0 0 360 80" style="width:100%; height:100%;"><rect x="0" y="30" width="360" height="20" fill="#eee" rx="10"/><rect x="0" y="30" width="280" height="20" fill="oklch(0.66 0.16 152)" rx="10"/><text x="285" y="44" font-family="Geist Mono, monospace" font-size="14" fill="oklch(0.55 0.13 152)">78%</text></svg>
+      </div>
+      <p class="desc">How often does the strategy actually reach the target?</p>
+    </div>
+    <div class="eval-cell">
+      <div class="top"><div class="lbl">Metric · 02</div></div>
+      <h3>Shortfall risk</h3>
+      <div class="viz">
+        <svg viewBox="0 0 360 80" style="width:100%; height:100%;"><polyline points="0,40 60,42 120,55 180,68 240,55 300,42 360,40" fill="none" stroke="#d05a3e" stroke-width="2"/><polyline points="0,40 360,40" stroke="rgba(0,0,0,0.1)" stroke-dasharray="3 3"/></svg>
+      </div>
+      <p class="desc">If we fail, how bad is the gap below the target?</p>
+    </div>
+    <div class="eval-cell">
+      <div class="top"><div class="lbl">Metric · 03</div></div>
+      <h3>Terminal wealth</h3>
+      <div class="viz">
+        <svg viewBox="0 0 360 80" style="width:100%; height:100%;">
+          <path d="M0,80 C50,80 90,30 180,20 C270,30 310,80 360,80 Z" fill="rgba(60,100,180,0.18)" stroke="#5c84d4" stroke-width="2"/>
+          <line x1="180" x2="180" y1="20" y2="80" stroke="#5c84d4" stroke-dasharray="3 3"/>
+        </svg>
+      </div>
+      <p class="desc">The full distribution of outcomes — not a single number.</p>
+    </div>
+    <div class="eval-cell">
+      <div class="top"><div class="lbl">Metric · 04</div></div>
+      <h3>Max drawdown</h3>
+      <div class="viz">
+        <svg viewBox="0 0 360 80" style="width:100%; height:100%;"><polyline points="0,30 50,28 100,40 140,55 170,68 200,50 250,42 300,32 360,28" fill="none" stroke="#d4a01e" stroke-width="2"/><line x1="170" y1="30" x2="170" y2="68" stroke="#d4a01e" stroke-dasharray="3 3"/></svg>
+      </div>
+      <p class="desc">Painful losses on the path, not just the endpoint.</p>
+    </div>
+    <div class="eval-cell">
+      <div class="top"><div class="lbl">Metric · 05</div></div>
+      <h3>Turnover</h3>
+      <div class="viz">
+        <svg viewBox="0 0 360 80" style="width:100%; height:100%;"><g fill="oklch(0.66 0.16 152)"><rect x="10" y="40" width="14" height="36"/><rect x="40" y="20" width="14" height="56"/><rect x="70" y="50" width="14" height="26"/><rect x="100" y="34" width="14" height="42"/><rect x="130" y="26" width="14" height="50"/><rect x="160" y="48" width="14" height="28"/><rect x="190" y="20" width="14" height="56"/><rect x="220" y="42" width="14" height="34"/><rect x="250" y="36" width="14" height="40"/><rect x="280" y="28" width="14" height="48"/><rect x="310" y="50" width="14" height="26"/></g></svg>
+      </div>
+      <p class="desc">Trading creates costs. The agent should rebalance, not churn.</p>
+    </div>
+    <div class="eval-cell">
+      <div class="top"><div class="lbl">Metric · 06</div></div>
+      <h3>Regime behavior</h3>
+      <div class="viz">
+        <svg viewBox="0 0 360 80" style="width:100%; height:100%;">
+          <rect x="0" y="20" width="80" height="40" fill="rgba(58,169,116,0.25)"/>
+          <rect x="80" y="20" width="60" height="40" fill="rgba(208,90,62,0.25)"/>
+          <rect x="140" y="20" width="100" height="40" fill="rgba(212,160,30,0.25)"/>
+          <rect x="240" y="20" width="120" height="40" fill="rgba(92,132,212,0.25)"/>
+          <polyline points="0,50 80,32 140,55 240,38 360,30" fill="none" stroke="#0a0b0d" stroke-width="2"/>
+        </svg>
+      </div>
+      <p class="desc">Does the policy actually adapt when the regime flips?</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 11 — REAL-LIFE USES
+============================================================ -->
+<section class="slide dark s-uses" data-screen-label="11 Real-Life Uses">
+  <div class="chrome">
+    <div class="row top"><span>11 · Real-world value</span><span>Beyond the classroom demo</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>11 / 14</span></div>
+  </div>
+
+  <h2>Not a classroom toy.<br/>A <span class="em">long-term financial assistant.</span></h2>
+
+  <div class="uses-grid">
+    <div class="use-card tall" style="background: linear-gradient(180deg, #1d251f 0%, #0a0b0d 100%);">
+      <div class="ph"></div>
+      <div class="label">Use case · 01</div>
+      <div>
+        <div class="name">Robo-advisor that<br/>knows your <em>goal</em>.</div>
+        <p class="desc" style="margin-top: 24px; max-width: 420px;">Allocation that personalises around the user's target — wealth, horizon, risk capacity — and rewires when life changes.</p>
+      </div>
+    </div>
+    <div class="use-card">
+      <div class="ph"></div>
+      <div class="label">Use case · 02</div>
+      <div class="name">Retirement planner</div>
+      <div class="desc">Reduce the probability of running out of money before the deadline.</div>
+    </div>
+    <div class="use-card">
+      <div class="ph"></div>
+      <div class="label">Use case · 03</div>
+      <div class="name">Target-date fund</div>
+      <div class="desc">Dynamic glide path that adapts as the deadline approaches and the regime shifts.</div>
+    </div>
+    <div class="use-card">
+      <div class="ph"></div>
+      <div class="label">Use case · 04</div>
+      <div class="name">Personal finance app</div>
+      <div class="desc">"You're behind your goal. Reduce risk." Concrete guidance, not vibes.</div>
+    </div>
+    <div class="use-card">
+      <div class="ph"></div>
+      <div class="label">Use case · 05</div>
+      <div class="name">Education simulator</div>
+      <div class="desc">Teach risk, compounding, and uncertainty by letting students play the agent.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 12 — TIMELINE
+============================================================ -->
+<section class="slide light s-plan" data-screen-label="12 Six-Week Plan">
+  <div class="chrome">
+    <div class="row top"><span>12 · Execution plan</span><span>Six disciplined weeks</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>12 / 14</span></div>
+  </div>
+
+  <h2>Six weeks. <span class="serif">One paper.<br/></span>One controlled extension.</h2>
+  <p class="lede">No extra features ship until the baseline is reproduced and evaluated. That is the discipline.</p>
+
+  <div class="timeline">
+    <div class="tl-week"><div class="num">1</div><div class="lbl">Week 01</div><h3>Paper &amp; setup</h3><p>Read deeply. Reproduce the base code. Set up the repo.</p></div>
+    <div class="tl-week"><div class="num">2</div><div class="lbl">Week 02</div><h3>MDP environment</h3><p>State, action, reward, transition. Gymnasium-style API.</p></div>
+    <div class="tl-week"><div class="num">3</div><div class="lbl">Week 03</div><h3>Baselines</h3><p>Fixed allocation. Buy-and-hold. Rule-based glide path.</p></div>
+    <div class="tl-week"><div class="num">4</div><div class="lbl">Week 04</div><h3>RL agent</h3><p>G-Learner replication. PPO comparison.</p></div>
+    <div class="tl-week"><div class="num">5</div><div class="lbl">Week 05</div><h3>Regime extension</h3><p>Bull · bear · high-vol · stable. Policy non-stationary.</p></div>
+    <div class="tl-week"><div class="num">6</div><div class="lbl">Week 06</div><h3>Evaluation</h3><p>Charts, report, final presentation.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 13 — RACE CHART (expected result)
+============================================================ -->
+<section class="slide dark s-race" data-screen-label="13 Expected Result">
+  <div class="chrome">
+    <div class="row top"><span>13 · Expected result</span><span>RL agent vs baselines</span></div>
+    <div class="row bot"><span>Regime-Aware GBWM</span><span>13 / 14</span></div>
+  </div>
+
+  <h2>Can RL improve <span class="serif">the probability</span><br/>of reaching the goal?</h2>
+
+  <div class="race-stage">
+    <svg id="race-svg" class="race-svg" viewBox="0 0 1500 600"></svg>
+    <div class="race-side">
+      <div class="race-stat">
+        <div class="lbl">Headline metric</div>
+        <div class="big" style="margin-top: 8px;">P(goal)</div>
+        <div style="font-family: var(--font-mono); font-size: 18px; color: #b6b6b1; margin-top: 12px;">
+          <span style="color: oklch(0.66 0.16 152);">▲ +13pp</span> vs glide path<br/>
+          <span style="color: oklch(0.66 0.16 152);">▲ +21pp</span> vs buy &amp; hold
+        </div>
+      </div>
+      <div class="race-leg">
+        <div class="item"><i style="background: oklch(0.66 0.16 152);"></i>Regime-aware (mine)</div>
+        <div class="item"><i style="background: #d4a01e;"></i>G-Learner</div>
+        <div class="item"><i style="background: #5c84d4;"></i>Glide path</div>
+        <div class="item"><i style="background: #a78bfa;"></i>60/40 fixed</div>
+        <div class="item"><i style="background: #8a8a85;"></i>Buy &amp; hold</div>
+      </div>
+    </div>
+  </div>
+
+  <p style="font-family: var(--font-mono); font-size: 16px; color: #8a8a85; letter-spacing: 0.05em;">Illustrative trajectories — final numbers come from the experiments in week six.</p>
+</section>
+
+<!-- ============================================================
+     SLIDE 14 — CLOSING
+============================================================ -->
+<section class="slide dark s-close" data-screen-label="14 Closing">
+  <canvas class="particles" id="particles-14"></canvas>
+
+  <div class="chrome">
+    <div class="row top"><span>14 · The ask</span><span>One sentence</span></div>
+    <div class="row bot"><span>Yavhé Sergio Enrique Orozco Valle</span><span>14 / 14</span></div>
+  </div>
+
+  <div style="position:relative; z-index:5;">
+    <div class="eyebrow" style="margin-bottom: 28px; color: #8a8a85;">14 — In one sentence</div>
+    <h2>
+      Build an agent that<br/>
+      <span class="serif">reaches the goal</span> —<br/>
+      and adapts to the weather.
+    </h2>
+  </div>
+
+  <div style="position:relative; z-index:5;">
+    <p class="pitch">
+      "Instead of maximizing raw return like a trading bot, the agent learns
+      portfolio decisions that maximize the probability of reaching a financial
+      goal — and my extension makes it adapt to different market regimes."
+    </p>
+    <div class="why" style="margin-top: 56px;">
+      <div>Strong<br/>course alignment</div>
+      <div>Clear<br/>MDP</div>
+      <div>Real-world<br/>finance value</div>
+      <div>Feasible<br/>in six weeks</div>
+      <div>One paper<br/>+ one extension</div>
+      <div>Honest<br/>evaluation</div>
+      <div>Defensible<br/>research claim</div>
+    </div>
+  </div>
+</section>
+
+</deck-stage>
+
+<script src="deck-stage.js"></script>
+<script src="animations.js"></script>
+<script>
+  // Init animations once fonts settle
+  function init() {
+    const A = window.DeckAnims;
+    const p1 = document.getElementById('particles-1');
+    const p14 = document.getElementById('particles-14');
+    if (p1) A.initParticles(p1, { count: 90 });
+    if (p14) A.initParticles(p14, { count: 60 });
+
+    const mdp = document.getElementById('mdp-svg');
+    if (mdp) A.initMDP(mdp);
+
+    const gps = document.getElementById('gps-svg-2');
+    if (gps) A.initGPS(gps);
+
+    document.querySelectorAll('.regime-card .viz').forEach(v => {
+      A.initRegimeViz(v, v.dataset.regime);
+    });
+
+    const bb = document.getElementById('bot-bad');
+    const bg = document.getElementById('bot-good');
+    if (bb) A.initBotMap(bb, 'bot');
+    if (bg) A.initBotMap(bg, 'gps');
+
+    const race = document.getElementById('race-svg');
+    if (race) A.initRaceChart(race);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 50));
+  } else {
+    setTimeout(init, 50);
+  }
+</script>
+
+</body>
+</html>
