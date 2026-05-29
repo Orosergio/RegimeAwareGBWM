@@ -1,0 +1,103 @@
+# ============================================================================
+# Regime-Aware GBWM — default configuration
+# ----------------------------------------------------------------------------
+# This single-risky-asset world matches the project brief exactly:
+#   equity (the "market") + risk-free cash.  The action is the equity weight,
+#   so the baselines map cleanly: buy&hold=100% equity, 60/40=60% equity,
+#   glide-path = equity weight decreasing with time.
+# See configs/multi_asset.yaml for the multi-asset "big version".
+# ============================================================================
+seed: 42
+
+goal:
+  initial_wealth: 100000.0
+  target_wealth: 250000.0
+  horizon_years: 20
+  contribution: 500.0          # per step (monthly) cashflow added to wealth
+  contribution_freq: monthly   # informational; steps_per_year drives timing
+  risk_free_rate: 0.03         # annual return on the safe (cash) asset
+
+market:
+  steps_per_year: 12           # monthly rebalancing / simulation granularity
+  risk_free_rate: 0.03
+  assets:
+    - {name: equity, risky: true}
+  # Annualized drift (mu) and volatility (sigma) per regime, per risky asset.
+  # Scalars are accepted for a single risky asset.
+  regimes:
+    - {name: bull,     mu: 0.15,  sigma: 0.12}
+    - {name: stable,   mu: 0.08,  sigma: 0.14}
+    - {name: high_vol, mu: 0.05,  sigma: 0.25}
+    - {name: bear,     mu: -0.10, sigma: 0.30}
+  transition:
+    persistence: 0.85          # diagonal of the regime transition matrix
+    # matrix: null -> built from persistence (off-diagonals split evenly)
+  # Correlation among risky assets (identity for a single asset).
+  correlation: null
+  # Multiplier applied to off-diagonal correlations in stressed regimes
+  # (contagion: correlations rise toward 1 in high_vol / bear).
+  stress_correlation_scale:
+    high_vol: 1.3
+    bear: 1.6
+
+env:
+  rebalance_every: 1           # steps between allowed reallocations
+  action_floor: 0.0            # min weight per risky asset
+  action_cap: 1.0              # max weight per risky asset
+  allow_leverage: false
+  observe_regime: probs        # one of: probs | onehot | none  (what the agent sees)
+  reward:
+    # Reward = terminal goal utility - path penalties (see envs/wealth_env.py).
+    goal_bonus: 1.0            # reward for terminal wealth >= target
+    shortfall_penalty: 1.0     # weight on (target - terminal_wealth)+ / target
+    overshoot_credit: 0.05     # small credit for wealth beyond target (diminishing)
+    turnover_penalty: 0.02     # per-step penalty on |Δ weights| (transaction cost proxy)
+    drawdown_penalty: 0.0      # optional penalty on intra-path drawdown
+    step_shaping: 0.0          # optional dense shaping toward the goal each step
+    utility: threshold             # terminal utility shape: power | linear | threshold
+    risk_aversion: 3.0         # CRRA-like curvature for 'power' utility
+
+simulation:
+  n_episodes: 1000             # Monte Carlo paths for evaluation
+  antithetic: true             # variance reduction in Monte Carlo
+
+hmm:
+  n_states: 4
+  covariance_type: full
+  n_iter: 200
+  lookback_steps: 12           # rolling window used for online filtering in env
+  min_history: 6               # steps before HMM produces a confident posterior
+
+agents:
+  glide_path:
+    start_equity: 0.90
+    end_equity: 0.30
+  g_learner:
+    n_wealth_bins: 201
+    n_actions: 21              # discretized equity weights in [0,1]
+    gamma: 0.999
+    beta: 15.0                 # inverse temperature (entropy regularization)
+    greedy: true               # deploy greedy action (beta->inf); false = stochastic Gibbs
+    reward_scale: 1.0
+  ppo:
+    total_timesteps: 300000
+    learning_rate: 0.0003
+    n_steps: 2048
+    batch_size: 256
+    gamma: 0.999
+  sac:
+    total_timesteps: 200000
+    learning_rate: 0.0003
+    batch_size: 256
+    gamma: 0.999
+
+data:
+  cache_dir: data/cache
+  equity_ticker: SPY           # proxy for the broad equity "market"
+  benchmark_tickers: [SPY, AGG, GLD, EFA]
+  fred_series: [DGS10, VIXCLS, UNRATE, CPIAUCSL]
+  start: "2005-01-01"
+
+paths:
+  artifacts: artifacts
+  checkpoints: artifacts/checkpoints

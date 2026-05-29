@@ -1,0 +1,108 @@
+# ============================================================================
+# Regime-Aware GBWM — multi-asset "big version" configuration.
+# Four risky assets + cash, regime-dependent drifts/vols and a correlation
+# matrix that tightens (contagion) in stressed regimes.  Inherits any keys not
+# overridden here from configs/default.yaml when loaded with --base default.
+# ============================================================================
+seed: 42
+
+goal:
+  initial_wealth: 100000.0
+  target_wealth: 250000.0
+  horizon_years: 20
+  contribution: 500.0
+  contribution_freq: monthly
+  risk_free_rate: 0.03
+
+market:
+  steps_per_year: 12
+  risk_free_rate: 0.03
+  assets:
+    - {name: us_equity,   risky: true}
+    - {name: intl_equity, risky: true}
+    - {name: bonds,       risky: true}
+    - {name: commodities, risky: true}
+  regimes:
+    - name: bull
+      mu:    [0.15, 0.13, 0.03, 0.06]
+      sigma: [0.12, 0.14, 0.05, 0.18]
+    - name: stable
+      mu:    [0.08, 0.07, 0.04, 0.04]
+      sigma: [0.14, 0.16, 0.06, 0.20]
+    - name: high_vol
+      mu:    [0.05, 0.04, 0.02, 0.03]
+      sigma: [0.25, 0.28, 0.09, 0.30]
+    - name: bear
+      mu:    [-0.10, -0.12, 0.06, -0.05]
+      sigma: [0.30, 0.34, 0.10, 0.35]
+  transition:
+    persistence: 0.85
+  correlation:
+    - [1.00, 0.85, -0.20, 0.30]
+    - [0.85, 1.00, -0.15, 0.35]
+    - [-0.20, -0.15, 1.00, 0.00]
+    - [0.30, 0.35, 0.00, 1.00]
+  stress_correlation_scale:
+    high_vol: 1.3
+    bear: 1.6
+
+env:
+  rebalance_every: 1
+  action_floor: 0.0
+  action_cap: 1.0
+  allow_leverage: false
+  observe_regime: probs
+  reward:
+    goal_bonus: 1.0
+    shortfall_penalty: 1.0
+    overshoot_credit: 0.05
+    turnover_penalty: 0.02
+    drawdown_penalty: 0.0
+    step_shaping: 0.0
+    utility: threshold
+    risk_aversion: 3.0
+
+simulation:
+  n_episodes: 1000
+  antithetic: true
+
+hmm:
+  n_states: 4
+  covariance_type: full
+  n_iter: 200
+  lookback_steps: 12
+  min_history: 6
+
+agents:
+  glide_path:
+    start_equity: 0.90
+    end_equity: 0.30
+  g_learner:
+    n_wealth_bins: 201
+    n_actions: 21
+    gamma: 0.999
+    beta: 15.0
+    greedy: true
+    reward_scale: 1.0
+  ppo:
+    total_timesteps: 500000
+    learning_rate: 0.0003
+    n_steps: 2048
+    batch_size: 256
+    gamma: 0.999
+  sac:
+    total_timesteps: 300000
+    learning_rate: 0.0003
+    batch_size: 256
+    gamma: 0.999
+
+data:
+  cache_dir: data/cache
+  equity_ticker: SPY
+  benchmark_tickers: [SPY, EFA, AGG, GLD]
+  fred_series: [DGS10, VIXCLS, UNRATE, CPIAUCSL]
+  start: "2005-01-01"
+
+paths:
+  artifacts: artifacts
+  checkpoints: artifacts/checkpoints

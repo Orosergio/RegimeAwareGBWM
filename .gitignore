@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Data + artifacts (large / regenerable). Keep small sample data + checkpoints tracked.
+data/cache/*
+!data/cache/.gitkeep
+artifacts/runs/
+*.ckpt
+*.pkl.tmp
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Trained checkpoints (regenerable; SB3 trained on user machine)
+artifacts/checkpoints/*
+!artifacts/checkpoints/.gitkeep

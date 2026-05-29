@@ -1,0 +1,8 @@
+# Minimal dependencies for the Streamlit Cloud demo (core + UI).
+# The demo uses the G-Learner + baselines (NumPy only); deep-RL agents are not
+# required to run it. Point Streamlit Cloud's "requirements file" at this.
+numpy>=1.24
+pandas>=2.0
+pyyaml>=6.0
+matplotlib>=3.7
+streamlit>=1.36

@@ -1,0 +1,22 @@
+# Full environment to run the lab + demo on your machine.
+# Recommended dev install instead:  pip install -e ".[all,dev]"
+#
+# --- core (always required) ---
+numpy>=1.24
+pandas>=2.0
+pyyaml>=6.0
+matplotlib>=3.7
+# --- reinforcement learning (PPO/SAC + Gymnasium env) ---
+gymnasium>=0.29
+stable-baselines3>=2.2.0
+torch>=2.1
+# --- real market/macro data ---
+yfinance>=0.2.40
+pandas-datareader>=0.10
+# --- interactive demo ---
+streamlit>=1.36
+plotly>=5.20
+# --- optional accelerated HMM backend + prettier CLI ---
+hmmlearn>=0.3.0
+scipy>=1.10
+rich>=13.0
