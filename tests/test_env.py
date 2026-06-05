@@ -33,7 +33,7 @@ def test_episode_terminates_after_T_steps():
     steps = 0
     done = False
     while not done:
-        _, r, done, trunc, _ = env.step(env.action_space.sample(np.random.default_rng(steps)))
+        _, r, done, trunc, _ = env.step(env.action_space.sample())
         assert np.isfinite(r)
         steps += 1
     assert steps == env.T and not trunc

@@ -9,11 +9,15 @@ HMM belief estimated from returns (see ``gbwm.detection.hmm``).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from gbwm.config import MarketConfig
 from gbwm.simulation.gbm import GBMSimulator
+
+if TYPE_CHECKING:
+    from gbwm.detection.filter import GaussianRegimeFilter
 
 
 # --------------------------------------------------------------------------- #
@@ -122,6 +126,7 @@ class MarketModel:
         risk_free_rate: float,
         regime_names: list[str],
         asset_names: list[str],
+        obs_idx: list[int] | None = None,
     ) -> None:
         self.gbm = GBMSimulator(drift, cov, dt)
         self.regime_sim = RegimeSimulator(transition)
@@ -129,6 +134,8 @@ class MarketModel:
         self.risk_free_rate = float(risk_free_rate)
         self.regime_names = list(regime_names)
         self.asset_names = list(asset_names)
+        # Asset indices the online regime belief is inferred from (default: all).
+        self.obs_idx = list(range(self.gbm.n_assets)) if obs_idx is None else list(obs_idx)
         if len(self.regime_names) != self.gbm.n_regimes:
             raise ValueError("regime_names length mismatch")
         if len(self.asset_names) != self.gbm.n_assets:
@@ -157,10 +164,31 @@ class MarketModel:
             risk_free_rate=market.risk_free_rate,
             regime_names=market.regime_names,
             asset_names=market.risky_assets,
+            obs_idx=market.regime_observed_indices,
         )
 
     def regime_index(self, name: str) -> int:
         return self.regime_names.index(name)
+
+    def make_filter(self, prior: np.ndarray | None = None) -> GaussianRegimeFilter:
+        """Online regime-belief filter restricted to the *observed* assets.
+
+        Reading the belief off the equity sleeve (``obs_idx``) keeps a tiny-vol
+        leg (bonds) from dominating the multi-asset Gaussian emission likelihood
+        and masking equity crashes. For a single risky asset this is the full
+        filter (identity projection).
+        """
+        from gbwm.detection.filter import GaussianRegimeFilter
+
+        idx = np.asarray(self.obs_idx, dtype=int)
+        mean = self.gbm.mean_log[:, idx]
+        cov = (self.gbm.cov * self.dt)[:, idx[:, None], idx[None, :]]
+        return GaussianRegimeFilter(mean, cov, self.regime_sim.P, prior=prior)
+
+    def project_obs(self, log_returns: np.ndarray) -> np.ndarray:
+        """Select the observed-asset columns of a log-return vector/batch."""
+        idx = np.asarray(self.obs_idx, dtype=int)
+        return log_returns[..., idx]
 
     def simulate(
         self,

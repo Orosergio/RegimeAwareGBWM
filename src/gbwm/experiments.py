@@ -174,6 +174,34 @@ def backtest_history(
     return res, cfg, calib
 
 
+def history(
+    config: Config,
+    market: str,
+    start: str | None = None,
+    end: str | None = None,
+    target: float | None = None,
+    initial: float | None = None,
+    contribution: float | None = None,
+    agents: list[str] | None = None,
+    regime_mode: str = "prior",
+    offline: bool = False,
+    registry: ModelRegistry | None = None,
+):
+    """Honest, out-of-sample walk-forward over a real market history.
+
+    Thin wrapper over :func:`gbwm.backtesting.historical.run_deployment` (lazy
+    import keeps the backtesting package optional and avoids an import cycle).
+    Returns a :class:`~gbwm.backtesting.historical.Deployment`.
+    """
+    from gbwm.backtesting.historical import run_deployment
+
+    return run_deployment(
+        config, market, start=start, end=end, target=target, initial=initial,
+        contribution=contribution, agents=agents, regime_mode=regime_mode,
+        offline=offline, registry=registry,
+    )
+
+
 # Friendly market name -> ETF/index proxy ticker (used by the demo).
 MARKETS = {
     "S&P 500 — US large caps (SPY)": "SPY",

@@ -81,7 +81,31 @@ When the goal is hard enough that you cannot simply coast, the **regime-aware**
 agent wins on P(goal), reduces expected shortfall, and at the hardest goal also
 cuts max drawdown (0.25 vs 0.29) — it reaches the goal with *less* path risk.
 
-## 7. Interpretation (the mature answer)
+## 7. Real-world validation — *deployed in 1999* (honest, out-of-sample)
+
+Monte-Carlo on our own simulator is a sanity check, not proof. The real test:
+**roll every strategy over real market history with no look-ahead** — economic-prior
+regimes (assumptions you could set on day one, *not* fit to the future) and an
+online belief filter that only ever sees past returns. See `HISTORY.md` for the
+full study; the headline (S&P 500, \$100k + \$500/mo, goal \$600k, **Jan 1999 → 2025**):
+
+| Strategy | Final | Reached goal | **Max drawdown** |
+|---|---:|:--:|---:|
+| G-Learner | \$642k | ✅ | **13%** |
+| Regime-Aware G-Learner | \$646k | ✅ | **19%** |
+| Buy & Hold | \$1,233k | ✅ | **50%** |
+
+Buy & Hold ends richer **only by surviving a 50% crash twice**; the goal-based RL
+agents reach the goal with **a third of the drawdown**. The agent's decisions are
+sensible *in real time*: it cut equity 65%→25% into the GFC as its bear-belief rose
+to 90%. The pattern holds on **NASDAQ** (Buy & Hold −71% vs −26%), **KOSPI** and
+**Nikkei**. And on **sequence-of-returns risk** — starting right before a crash —
+the regime-aware agent is decisive: deployed in **2007** it took a **16% drawdown
+vs Buy & Hold's 48%**, where the regime-*blind* agent (39%) gets caught.
+
+![Deployed in 1999 — S&P 500](docs/uploads/history_sp500_1999.png)
+
+## 8. Interpretation (the mature answer)
 
 Regime-awareness is not free lunch: its value depends on the goal's difficulty
 and on whether path risk is penalized. The honest conclusion is that
@@ -90,27 +114,37 @@ value precisely when timing risk matters** — ambitious goals and adverse-regim
 exposure. An RL policy that hit the goal only by gambling would be rejected; here
 the regime-aware agent improves outcomes while *lowering* drawdown at hard goals.
 
-## 8. Demo
+## 9. Demo
 
 The Streamlit app lets you set a goal, view the regimes, run the comparison, and
 inspect *why* the agent acted — e.g. *"it cut equity 57%→25% because the bear
 probability rose 10%→60%."* Move the target slider up and watch the regime-aware
 agent overtake the regime-blind one.
 
-## 9. Reproduce
+## 10. Reproduce
 
 ```bash
 pip install -e ".[all,dev]"
 gbwm evaluate                       # comparison table on the default goal
 gbwm train --agent regime_aware_g_learner
 gbwm backtest --agent regime_aware_g_learner --seed 7
+gbwm history --market sp500 --start 1999-01-01   # honest real-history backtest
+python scripts/historical_demo.py                # cross-market + sequence-risk + figures
 streamlit run app/streamlit_app.py
 ```
 
 *Numbers above are seed-dependent Monte-Carlo estimates; rankings are stable. See
 `ARCHITECTURE.md` for the system design and decision records.*
 
-## Reference
+## References
 
-Matthew F. Dixon and Igor Halperin (2020). *G-Learner and GIRL: Goal Based Wealth
-Management with Reinforcement Learning.* arXiv:2002.10990.
+- **Main paper.** Dixon, M. F. & Halperin, I. (2020). *G-Learner and GIRL: Goal Based
+  Wealth Management with Reinforcement Learning.* arXiv:2002.10990.
+- **Regime-switching extension.** Bauman, T., Goluža, S., Gašperov, B. & Kostanjčar, Z.
+  (2024). *Deep Reinforcement Learning for Goal-Based Investing Under Regime-Switching.*
+  PMLR.
+- **Course alignment.** Stanford University Bulletin — *CME 241: Foundations of
+  Reinforcement Learning with Applications in Finance.*
+- **Alternative considered.** Bühler, H., Gonon, L., Teichmann, J. & Wood, B. (2018).
+  *Deep Hedging.* arXiv:1802.03042.
+- **Implementation tools.** Farama Gymnasium environment API; Stable-Baselines3 (PPO/SAC).

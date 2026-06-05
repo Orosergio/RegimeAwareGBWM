@@ -9,11 +9,12 @@ not the draw.
 
 from __future__ import annotations
 
+from typing import Callable
+
 import numpy as np
 import pandas as pd
 
 from gbwm.config import Config
-from gbwm.detection.filter import GaussianRegimeFilter
 from gbwm.evaluation.metrics import PolicyResult, evaluate
 from gbwm.policies.base import DecisionContext, Policy
 from gbwm.simulation.regimes import MarketModel, MarketPaths
@@ -37,7 +38,7 @@ def run_policy(
         market_paths = mm.simulate(n, T, rng, antithetic=config.simulation.antithetic)
     N = market_paths.n_paths
 
-    filt = GaussianRegimeFilter(mm.gbm.mean_log, mm.gbm.cov * mm.dt, mm.regime_sim.P)
+    filt = mm.make_filter()
     alpha = np.tile(filt.prior, (N, 1))
     wealth = np.full(N, float(W0))
 
@@ -66,7 +67,7 @@ def run_policy(
         weights_hist[:, t, :] = w
         belief_hist[:, t, :] = belief
         wealth_hist[:, t + 1] = wealth
-        alpha = filt.update_batch(alpha, np.log1p(r))
+        alpha = filt.update_batch(alpha, mm.project_obs(np.log1p(r)))
 
     histories = {
         "wealth": wealth_hist,
@@ -125,7 +126,7 @@ def run_on_returns(
         raise ValueError(f"returns length {T} != config.total_steps {config.total_steps}")
 
     G, c = config.goal.target_wealth, config.goal.contribution
-    filt = GaussianRegimeFilter(mm.gbm.mean_log, mm.gbm.cov * mm.dt, mm.regime_sim.P)
+    filt = mm.make_filter()
     alpha = filt.reset()
     wealth = float(config.goal.initial_wealth)
 
@@ -149,10 +150,91 @@ def run_on_returns(
         belief_hist[0, t, :] = belief
         regime_hist[0, t] = int(np.argmax(belief))
         wealth_hist[0, t + 1] = wealth
-        alpha = filt.update(alpha, np.log1p(r))
+        alpha = filt.update(alpha, mm.project_obs(np.log1p(r)))
 
     histories = {
         "wealth": wealth_hist, "weights": weights_hist, "belief": belief_hist,
+        "regime": regime_hist, "asset_names": mm.asset_names, "regime_names": mm.regime_names,
+    }
+    return evaluate(policy.name, np.array([wealth]), G, histories, mm.regime_names)
+
+
+def run_on_returns_walk_forward(
+    config: Config,
+    risky_returns: np.ndarray,
+    make_model_and_policy: Callable[[np.ndarray | None], tuple[MarketModel, Policy]],
+    *,
+    prior_returns_log: np.ndarray | None = None,
+    recalibrate_every: int = 12,
+) -> PolicyResult:
+    """Roll a policy over a real return path while **re-learning the regime model
+    every ``recalibrate_every`` steps from data seen so far** — the strictest,
+    no-look-ahead "learn the regimes only with data prior to each date" mode.
+
+    At each recalibration boundary ``t`` we hand ``make_model_and_policy`` the
+    history strictly *before* ``t`` (the optional ``prior_returns_log`` observed
+    before deployment, concatenated with the realized log-returns ``[:t]``). The
+    callback returns a freshly calibrated :class:`MarketModel` and a re-solved
+    :class:`Policy`. Between boundaries we walk forward through the *actual*
+    returns, filtering the regime belief online. The belief vector carries across
+    recalibrations (states stay ordered bull→bear), so crisis detection is not
+    reset; only the emission model and the policy are refreshed.
+
+    ``risky_returns`` is ``(T,)`` or ``(T, A)`` **simple** returns with
+    ``T == config.total_steps``.
+    """
+    rr = np.asarray(risky_returns, dtype=float)
+    if rr.ndim == 1:
+        rr = rr[:, None]
+    T, A = rr.shape
+    if T != config.total_steps:
+        raise ValueError(f"returns length {T} != config.total_steps {config.total_steps}")
+    log_returns = np.log1p(rr)
+    prior = None
+    if prior_returns_log is not None:
+        prior = np.asarray(prior_returns_log, dtype=float)
+        if prior.ndim == 1:
+            prior = prior[:, None]
+
+    G, c = config.goal.target_wealth, config.goal.contribution
+    wealth = float(config.goal.initial_wealth)
+    wealth_hist = np.empty((1, T + 1)); wealth_hist[0, 0] = wealth
+    weights_hist = np.empty((1, T, A))
+    belief_hist: list[np.ndarray] = []
+    regime_hist = np.empty((1, T), dtype=int)
+
+    mm: MarketModel | None = None
+    policy: Policy | None = None
+    filt: GaussianRegimeFilter | None = None
+    alpha: np.ndarray | None = None
+
+    for t in range(T):
+        if t % recalibrate_every == 0:
+            parts = [p for p in (prior, log_returns[:t]) if p is not None and len(p) > 0]
+            history = np.concatenate(parts, axis=0) if parts else None
+            mm, policy = make_model_and_policy(history)
+            filt = mm.make_filter()
+            alpha = filt.reset() if alpha is None else alpha  # carry belief forward
+            policy.reset(1)
+
+        belief = filt.predict(alpha)
+        ctx = DecisionContext(
+            step=t, n_steps=T, wealth=np.array([wealth]), target=G,
+            belief=belief[None, :], n_assets=A, regime_names=mm.regime_names,
+        )
+        w = policy.weights(ctx)[0]
+        r = rr[t]
+        port_ret = float(w @ r + (1.0 - w.sum()) * mm.cash_return)
+        wealth = (wealth + c) * (1.0 + port_ret)
+        weights_hist[0, t, :] = w
+        belief_hist.append(belief)
+        regime_hist[0, t] = int(np.argmax(belief))
+        wealth_hist[0, t + 1] = wealth
+        alpha = filt.update(alpha, mm.project_obs(log_returns[t]))
+
+    histories = {
+        "wealth": wealth_hist, "weights": weights_hist,
+        "belief": np.array(belief_hist)[None, :, :],
         "regime": regime_hist, "asset_names": mm.asset_names, "regime_names": mm.regime_names,
     }
     return evaluate(policy.name, np.array([wealth]), G, histories, mm.regime_names)

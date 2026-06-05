@@ -41,15 +41,19 @@ def calibrate_regimes(
     names: list[str] | None = None,
     seed: int = 0,
     n_restarts: int = 6,
+    n_iter: int = 200,
 ) -> RegimeCalibration:
     """Fit an HMM to per-step log-returns and annualize the regime parameters.
 
     GBM mapping: if per-step log-returns have mean ``m`` and variance ``v`` then
     ``sigma_annual = sqrt(v * steps_per_year)`` and
     ``mu_annual = m * steps_per_year + 0.5 * sigma_annual**2``.
+
+    ``n_restarts`` / ``n_iter`` trade fit quality for speed — the walk-forward
+    backtest lowers them since it re-fits every year.
     """
     x = np.asarray(returns_log_step, dtype=float)
-    det = HMMRegimeDetector(n_states=n_states, n_restarts=n_restarts, seed=seed).fit(x)
+    det = HMMRegimeDetector(n_states=n_states, n_restarts=n_restarts, n_iter=n_iter, seed=seed).fit(x)
     mean_log = det.means_  # (K, A)
     var_log = np.array([np.diag(c) for c in det.covs_])  # (K, A)
     sigma_annual = np.sqrt(var_log * steps_per_year)

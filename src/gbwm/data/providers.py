@@ -22,6 +22,27 @@ def _cache_key(*parts: str) -> str:
     return hashlib.sha1("|".join(parts).encode()).hexdigest()[:16]
 
 
+def _source_path(cache: Path) -> Path:
+    """Sidecar file recording the true provenance of a cached series."""
+    return cache.with_suffix(".source")
+
+
+def _cached_source(cache: Path) -> str:
+    """Honest provenance of a cache hit: ``"synthetic"`` if the file holds the
+    synthetic fallback (so the app never presents it as real), else ``"cache"``
+    (a previously-fetched real series)."""
+    p = _source_path(cache)
+    origin = p.read_text().strip() if p.exists() else ""
+    return "synthetic" if origin == "synthetic" else "cache"
+
+
+def _record_source(cache: Path, source: str) -> None:
+    try:
+        _source_path(cache).write_text(source)
+    except OSError:  # pragma: no cover - best-effort provenance marker
+        pass
+
+
 def _synthetic_prices(tickers: list[str], index: pd.DatetimeIndex, seed: int = 0) -> pd.DataFrame:
     """Deterministic GBM-ish price panel used when no provider is available."""
     rng = np.random.default_rng(seed)
@@ -45,10 +66,13 @@ class MarketDataProvider:
         self, tickers: list[str], start: str, end: str | None = None
     ) -> pd.DataFrame:
         end = end or pd.Timestamp.today().strftime("%Y-%m-%d")
-        key = _cache_key("prices", ",".join(tickers), start, end)
+        parts = ["prices", ",".join(tickers), start, end]
+        if self.offline:
+            parts.append("offline")  # never collide with (or be served as) live data
+        key = _cache_key(*parts)
         cache = self.cache_dir / f"{key}.csv"
         if cache.exists():
-            self.last_source = "cache"
+            self.last_source = _cached_source(cache)
             return pd.read_csv(cache, index_col=0, parse_dates=True)
 
         df: pd.DataFrame | None = None
@@ -59,9 +83,18 @@ class MarketDataProvider:
                 raw = yf.download(
                     tickers, start=start, end=end, auto_adjust=True, progress=False
                 )
-                close = raw["Close"] if isinstance(raw.columns, pd.MultiIndex) else raw[["Close"]]
-                df = close.dropna(how="all")
-                df.columns = tickers if df.shape[1] == len(tickers) else df.columns
+                if isinstance(raw.columns, pd.MultiIndex):
+                    # Multi-ticker: columns under "Close" are the ticker NAMES (yfinance
+                    # returns them sorted, not in request order). Reindex BY NAME to the
+                    # requested order — never blindly relabel, which would mis-assign one
+                    # ticker's prices to another's column.
+                    close = raw["Close"]
+                    present = [t for t in tickers if t in close.columns]
+                    df = close.reindex(columns=present).dropna(how="all")
+                else:
+                    # Single ticker: a flat OHLCV frame; take Close and name it.
+                    df = raw[["Close"]].dropna(how="all")
+                    df.columns = tickers
                 self.last_source = "yfinance"
             except Exception as exc:  # network or missing dep
                 warnings.warn(f"yfinance unavailable ({exc}); using synthetic prices.")
@@ -73,6 +106,7 @@ class MarketDataProvider:
             self.last_source = "synthetic"
 
         df.to_csv(cache)
+        _record_source(cache, self.last_source)
         return df
 
     def get_returns(
@@ -104,10 +138,13 @@ class FredProvider:
         self, series_ids: list[str], start: str, end: str | None = None
     ) -> pd.DataFrame:
         end = end or pd.Timestamp.today().strftime("%Y-%m-%d")
-        key = _cache_key("fred", ",".join(series_ids), start, end)
+        parts = ["fred", ",".join(series_ids), start, end]
+        if self.offline:
+            parts.append("offline")
+        key = _cache_key(*parts)
         cache = self.cache_dir / f"{key}.csv"
         if cache.exists():
-            self.last_source = "cache"
+            self.last_source = _cached_source(cache)
             return pd.read_csv(cache, index_col=0, parse_dates=True)
 
         df: pd.DataFrame | None = None
@@ -131,6 +168,7 @@ class FredProvider:
             self.last_source = "synthetic"
 
         df.to_csv(cache)
+        _record_source(cache, self.last_source)
         return df
 
 

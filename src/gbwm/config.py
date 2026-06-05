@@ -98,11 +98,20 @@ class MarketConfig:
     transition: TransitionConfig = field(default_factory=TransitionConfig)
     correlation: list[list[float]] | None = None
     stress_correlation_scale: dict[str, float] = field(default_factory=dict)
+    # Which risky asset(s) the online regime belief is inferred from. With many
+    # assets, a tiny-volatility leg (bonds) would otherwise dominate the Gaussian
+    # emission likelihood and mask equity crashes, so the "market weather" is read
+    # off the equity sleeve. ``None`` => observe all risky assets (single-asset
+    # default, fully backward compatible).
+    regime_observed_assets: list[str] | None = None
 
     def __post_init__(self) -> None:
         _require(self.steps_per_year > 0, "steps_per_year must be > 0")
         n = self.n_risky
         _require(n >= 1, "market must contain at least one risky asset")
+        if self.regime_observed_assets is not None:
+            unknown = set(self.regime_observed_assets) - set(self.risky_assets)
+            _require(not unknown, f"regime_observed_assets has unknown asset(s): {unknown}")
         for r in self.regimes:
             _require(
                 len(r.mu) == n,
@@ -126,6 +135,14 @@ class MarketConfig:
     @property
     def n_risky(self) -> int:
         return len(self.risky_assets)
+
+    @property
+    def regime_observed_indices(self) -> list[int]:
+        """Indices (into the risky assets) the regime belief is inferred from."""
+        if self.regime_observed_assets is None:
+            return list(range(self.n_risky))
+        risky = self.risky_assets
+        return [risky.index(name) for name in self.regime_observed_assets]
 
     @property
     def regime_names(self) -> list[str]:
@@ -190,6 +207,7 @@ class MarketConfig:
             transition=TransitionConfig.from_dict(d.get("transition")),
             correlation=d.get("correlation"),
             stress_correlation_scale={k: float(v) for k, v in (d.get("stress_correlation_scale") or {}).items()},
+            regime_observed_assets=d.get("regime_observed_assets"),
         )
 
 

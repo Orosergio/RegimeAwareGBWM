@@ -16,10 +16,11 @@ def test_offline_synthetic_prices_and_cache():
         assert list(px.columns) == ["SPY", "AGG"]
         assert px.shape[0] > 100 and px.notna().all().all()
         assert prov.last_source == "synthetic"
-        # second call hits the cache
+        # second call hits the cache; provenance stays honest (the cached bytes
+        # are synthetic, so it must NOT masquerade as real "cache"/"yfinance")
         prov2 = MarketDataProvider(cache_dir=d, offline=True)
         px2 = prov2.fetch_prices(["SPY", "AGG"], "2018-01-01", "2020-01-01")
-        assert prov2.last_source == "cache"
+        assert prov2.last_source == "synthetic"
         assert np.allclose(px.values, px2.values)
 
 

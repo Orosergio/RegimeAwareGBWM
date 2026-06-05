@@ -12,12 +12,49 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
+# ---- Deck palette (mirrors docs/styles.css: Apple-keynote energy) ----------
+INK = "#0a0b0d"
+PAPER = "#fafaf7"
+MUTED = "#6b6b66"
+GOAL = "#2e9e5b"   # green  — safety / goal
+RISK = "#cf8a2c"   # amber  — risk / regime
+RL = "#4c6ef5"     # blue   — RL / data
+LOSS = "#e0553a"   # red    — shortfall
+
 REGIME_COLORS = {
-    "bull": "#2e9e5b",
-    "stable": "#4c78a8",
-    "high_vol": "#f58518",
-    "bear": "#e45756",
+    "bull": GOAL,
+    "stable": RL,
+    "high_vol": RISK,
+    "bear": LOSS,
 }
+
+
+def apply_deck_style() -> None:
+    """Match figures to the proposal deck: warm paper, ink text, clean spines."""
+    plt.rcParams.update({
+        "figure.facecolor": PAPER,
+        "axes.facecolor": PAPER,
+        "savefig.facecolor": PAPER,
+        "axes.edgecolor": MUTED,
+        "axes.labelcolor": INK,
+        "axes.titlecolor": INK,
+        "text.color": INK,
+        "xtick.color": MUTED,
+        "ytick.color": MUTED,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+        "axes.grid": True,
+        "grid.color": "#e7e7e2",
+        "grid.linewidth": 0.8,
+        "font.size": 11,
+        "axes.titlesize": 13,
+        "axes.titleweight": "600",
+        "legend.frameon": False,
+        "figure.autolayout": True,
+    })
+
+
+apply_deck_style()
 
 
 def plot_wealth_paths(histories: dict, target: float, n_show: int = 60, ax=None):
@@ -26,11 +63,11 @@ def plot_wealth_paths(histories: dict, target: float, n_show: int = 60, ax=None)
         _, ax = plt.subplots(figsize=(7, 4))
     t = np.arange(wealth.shape[1])
     idx = np.random.default_rng(0).choice(wealth.shape[0], size=min(n_show, wealth.shape[0]), replace=False)
-    ax.plot(t, wealth[idx].T, color="#4c78a8", alpha=0.12, lw=0.8)
-    ax.plot(t, np.median(wealth, axis=0), color="#1f4e79", lw=2.2, label="median")
-    ax.plot(t, np.percentile(wealth, 10, axis=0), color="#1f4e79", lw=1, ls="--", label="10th pct")
-    ax.plot(t, np.percentile(wealth, 90, axis=0), color="#1f4e79", lw=1, ls=":", label="90th pct")
-    ax.axhline(target, color="#e45756", lw=1.8, label="goal")
+    ax.plot(t, wealth[idx].T, color=RL, alpha=0.12, lw=0.8)
+    ax.plot(t, np.median(wealth, axis=0), color=INK, lw=2.2, label="median")
+    ax.plot(t, np.percentile(wealth, 10, axis=0), color=INK, lw=1, ls="--", label="10th pct")
+    ax.plot(t, np.percentile(wealth, 90, axis=0), color=INK, lw=1, ls=":", label="90th pct")
+    ax.axhline(target, color=LOSS, lw=1.8, label="goal")
     ax.set(xlabel="step", ylabel="wealth", title="Wealth trajectories")
     ax.legend(loc="upper left", fontsize=8)
     return ax.figure
@@ -65,8 +102,8 @@ def plot_regime_beliefs(belief_path: np.ndarray, regime_names: list[str], ax=Non
 def plot_terminal_distribution(terminal_wealth: np.ndarray, target: float, ax=None):
     if ax is None:
         _, ax = plt.subplots(figsize=(7, 4))
-    ax.hist(terminal_wealth, bins=60, color="#4c78a8", alpha=0.8)
-    ax.axvline(target, color="#e45756", lw=2, label="goal")
+    ax.hist(terminal_wealth, bins=60, color=RL, alpha=0.8)
+    ax.axvline(target, color=LOSS, lw=2, label="goal")
     ax.set(xlabel="terminal wealth", ylabel="count", title="Terminal-wealth distribution")
     ax.legend(fontsize=8)
     return ax.figure
@@ -77,9 +114,9 @@ def plot_strategy_comparison(results: dict, ax=None):
         _, ax = plt.subplots(figsize=(7, 4))
     names = list(results.keys())
     pgoal = [results[n].p_goal for n in names]
-    bars = ax.bar(range(len(names)), pgoal, color="#4c78a8")
+    bars = ax.bar(range(len(names)), pgoal, color=RL)
     if names:
-        bars[int(np.argmax(pgoal))].set_color("#2e9e5b")
+        bars[int(np.argmax(pgoal))].set_color(GOAL)
     ax.set_xticks(range(len(names)))
     ax.set_xticklabels(names, rotation=20, ha="right", fontsize=8)
     ax.set(ylabel="P(goal)", ylim=(0, 1), title="Probability of reaching the goal")

@@ -52,6 +52,11 @@ wealth and your goal*, and *the detected market regime* at once.
   (FRED), with on-disk caching and offline fallback.
 - **Evaluation**: P(goal), expected shortfall, terminal-wealth distribution,
   regime-conditional P(goal), turnover, max drawdown.
+- **Real-world backtest (no look-ahead)**: *"if you had deployed this in 1999"* —
+  roll the agent over real history (S&P 500, NASDAQ, KOSPI, Nikkei, Hang Seng, DAX,
+  Magnificent 7) and see its month-by-month decisions through the dot-com crash, the
+  GFC and COVID. The agent uses economic-prior regimes and an online belief filter
+  (past data only). See **`HISTORY.md`**.
 - **Explainability**: plain-language explanations of agent decisions (rule-based
   by default; LLM provider pluggable).
 - **Streamlit demo** deployable to Streamlit Cloud (loads pre-trained checkpoints).
@@ -81,7 +86,12 @@ gbwm train --config configs/default.yaml --agent regime_aware_g_learner
 # 3) compare every strategy with Monte-Carlo and print the results table
 gbwm evaluate --config configs/default.yaml
 
-# 4) launch the interactive demo
+# 4) HONEST real-world backtest: "if you had deployed this in 1999"
+gbwm history --market sp500 --start 1999-01-01     # scorecard + decision diary
+gbwm history --market kospi --start 1999-01-01      # works for KOSPI, NASDAQ, Nikkei, Mag7…
+python scripts/historical_demo.py                   # cross-market + sequence-risk + figures
+
+# 5) launch the interactive demo
 streamlit run app/streamlit_app.py
 ```
 
@@ -98,11 +108,13 @@ regime-aware-gbwm/
 │   ├── detection/             # HMM regime inference
 │   ├── data/                  # yfinance + FRED adapters, calibration
 │   ├── evaluation/            # metrics, Monte-Carlo harness, plots
+│   ├── backtesting/           # honest out-of-sample backtest on real history
 │   ├── explain/               # plain-language advisor (LLM pluggable)
 │   ├── config.py · registry.py · utils/
 │   └── cli.py
 ├── app/streamlit_app.py       # interactive demo
-├── scripts/train_agents.py    # offline training entrypoint
+├── scripts/historical_demo.py # real-world "deployed in 1999" demonstration
+├── HISTORY.md                 # real-world results write-up
 ├── tests/                     # pytest suite
 └── notebooks/                 # exploratory notebooks
 ```
@@ -139,18 +151,20 @@ Three RL methods are implemented and shown working, not just described:
 
 The app's **How the AI learns** tab visualizes the *learned policy* as a heatmap
 (how much to hold in stocks across wealth × time, per market regime) and lets you
-watch Q-learning and PPO converge. The **Real markets** tab pulls actual history
-for the S&P 500, NASDAQ, Asia-Pacific and more (via yfinance), learns the regimes
-from it, and backtests every strategy on that real series.
+watch Q-learning and PPO converge. The **🕰️ Time machine** tab deploys the agent
+on real history (S&P 500, NASDAQ, KOSPI, Nikkei, Hang Seng, DAX, Magnificent 7)
+from 1999 — with **no look-ahead** — and shows the scorecard (terminal wealth *and*
+max drawdown), the month-by-month allocation, the real-time regime belief, and a
+**decision diary** of what it did at each crash.
 
 ## Using the demo (for non-experts)
 
 The Streamlit app is written for everyday users — plain language, no jargon. It
 has one-click **goal presets** (retirement, house, tuition, emergency fund), a
 headline **recommendation** ("your best shot is X — about Y% chance"), a
-walkthrough of a sample journey with plain explanations, and a **real market
-data** tab that calibrates the regimes from a real ETF (e.g. SPY via yfinance)
-and backtests on actual history.
+walkthrough of a sample journey with plain explanations, and a **🕰️ Time machine**
+tab that replays real market history since 1999 (no look-ahead) so you can see how
+each plan would have navigated the dot-com crash, the GFC and COVID.
 
 > ⚠️ **Educational simulation — not financial advice.** It explores assumptions
 > under a simplified market model (GBM + regimes); it does not predict markets,

@@ -2,6 +2,7 @@
 from gbwm.policies.base import DecisionContext, Policy, policy_registry
 from gbwm.policies.baselines import BASELINE_NAMES, BuyAndHold, GlidePath, SixtyForty
 from gbwm.policies.g_learner import GLearner, RegimeAwareGLearner
+from gbwm.policies.multi_asset import RegimeAwareMultiAsset, StaticMultiAsset
 from gbwm.policies.q_learner import QLearner
 from gbwm.policies.rl_agents import PPOPolicy, SACPolicy, SB3Policy, train_agent, train_ppo_with_curve
 
@@ -15,6 +16,8 @@ __all__ = [
     "BASELINE_NAMES",
     "GLearner",
     "RegimeAwareGLearner",
+    "RegimeAwareMultiAsset",
+    "StaticMultiAsset",
     "QLearner",
     "PPOPolicy",
     "SACPolicy",

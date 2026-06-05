@@ -98,8 +98,10 @@ viable while still showcasing heavy RL.
 | `data/providers.py` | Real data adapters + cache | `MarketDataProvider`, `FredProvider` |
 | `data/calibration.py` | Estimate regime params from data | `calibrate_regimes` |
 | `evaluation/metrics.py` | P(goal), shortfall, drawdown, turnover | `evaluate_paths` |
-| `evaluation/harness.py` | Run any policy through Monte-Carlo | `run_policy`, `compare_policies` |
+| `evaluation/harness.py` | Run any policy through Monte-Carlo / real returns | `run_policy`, `run_on_returns` |
 | `evaluation/plots.py` | Matplotlib/Plotly figures | — |
+| `backtesting/historical.py` | **Honest out-of-sample backtest on real history** (no look-ahead) | `Market`, `Deployment`, `run_deployment`, `scorecard`, `sequence_risk` |
+| `backtesting/plotting.py` | Deployment journey + sequence-risk figures | `plot_journey` |
 | `explain/` | Plain-language decision explanations | `Advisor`, `RuleBasedAdvisor` |
 | `cli.py` | `gbwm train|evaluate|backtest|calibrate` | argparse app |
 
@@ -193,6 +195,21 @@ the demo (`streamlit`/`plotly`) and an accelerated HMM (`hmmlearn`/`scipy`) are
 opt-in extras (`pip install -e ".[rl,data,app,accel]"`). *Consequence:* the whole
 core is unit-testable without network or large wheels; missing optional deps fail
 loudly only when that specific feature is invoked.
+
+**ADR-009 — Honest, out-of-sample historical backtest as the real-world proof.**
+*Context:* the original real-data demo fit the regimes on the *whole* realized path
+(look-ahead) and ranked by terminal wealth, which on a rising market just rewards
+max equity — making the RL agent look worse and proving nothing. *Decision:* add
+`backtesting/historical.py`, which (a) uses **economic-prior** regimes (or a
+strictly pre-start causal calibration), never parameters fit to the future; (b)
+detects regimes with the **online** belief filter (past-only); (c) walks forward
+through the **actual** returns of real indices (S&P 500, NASDAQ, KOSPI, Nikkei,
+Hang Seng, DAX, Magnificent-7 basket); and (d) reports **path-risk** metrics
+(max drawdown, worst 12-month) and a **decision diary**, not just terminal wealth.
+*Consequence:* a defensible "if you had deployed in 1999" story — the goal-based
+RL agents reach the goal with a fraction of the drawdown, and regime-awareness
+demonstrably earns its keep on sequence-of-returns risk (starting before a crash).
+The no-look-ahead property is enforced by a behavioral test.
 
 ---
 

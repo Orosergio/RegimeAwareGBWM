@@ -1,0 +1,133 @@
+# ============================================================================
+# Regime-Aware GBWM — true multi-asset world: S&P 500 + International stocks
+# + Bonds + Gold (+ cash).  This is the universe the live historical
+# multi-asset demo allocates across (backtesting/multiasset.py).
+#
+# The per-regime drifts/vols and the correlation matrix below are *common-sense
+# economic priors* (what an investor could write down on day one).  They are the
+# robust fallback and the "prior" honesty mode; in "causal_calibrate" /
+# "causal_walk_forward" mode they are RE-LEARNED from data observed only up to
+# each date, so nothing here ever peeks at the future.
+#
+# Asset order is fixed and MUST match MULTI_ASSET_UNIVERSE in
+# src/gbwm/backtesting/multiasset.py:  [us_equity, intl_equity, bonds, gold].
+# ============================================================================
+seed: 42
+
+goal:
+  initial_wealth: 100000.0
+  target_wealth: 250000.0
+  horizon_years: 20
+  contribution: 500.0
+  contribution_freq: monthly
+  risk_free_rate: 0.03
+
+market:
+  steps_per_year: 12
+  risk_free_rate: 0.03
+  assets:
+    - {name: us_equity,   risky: true}   # S&P 500          (proxy SPY)
+    - {name: intl_equity, risky: true}   # Intl developed   (proxy VGTSX)
+    - {name: bonds,       risky: true}   # US agg bonds     (proxy VBMFX)
+    - {name: gold,        risky: true}   # Gold bullion     (proxy GC=F)
+  # Annualized drift (mu) and volatility (sigma) per regime, per risky asset.
+  # Gold/bonds are the safe-haven legs: positive in bear/high-vol, while equities
+  # fall — so a regime-aware allocator rotates INTO them when storms hit.
+  regimes:
+    - name: bull
+      mu:    [0.15, 0.13, 0.02, 0.04]
+      sigma: [0.13, 0.15, 0.05, 0.16]
+    - name: stable
+      mu:    [0.08, 0.07, 0.03, 0.03]
+      sigma: [0.13, 0.15, 0.05, 0.16]
+    - name: high_vol
+      mu:    [0.04, 0.03, 0.03, 0.08]
+      sigma: [0.24, 0.27, 0.07, 0.20]
+    - name: bear
+      mu:    [-0.12, -0.14, 0.05, 0.10]
+      sigma: [0.30, 0.33, 0.08, 0.22]
+  transition:
+    persistence: 0.85
+  # Correlation among [us_equity, intl_equity, bonds, gold]: equities move
+  # together; bonds diversify equities (mild negative); gold is a near-zero
+  # diversifier that turns helpful in stress.
+  correlation:
+    - [1.00,  0.80, -0.15, 0.05]
+    - [0.80,  1.00, -0.10, 0.10]
+    - [-0.15, -0.10, 1.00, 0.15]
+    - [0.05,  0.10, 0.15, 1.00]
+  # Contagion: off-diagonal correlations rise toward 1 in stressed regimes.
+  stress_correlation_scale:
+    high_vol: 1.3
+    bear: 1.6
+  # The "market weather" (regime) is read off the equity sleeve only. Bonds have
+  # tiny monthly vol, so including them in the belief filter would let them
+  # dominate the Gaussian likelihood and mask equity crashes. The ALLOCATION
+  # still uses all four assets' per-regime parameters.
+  regime_observed_assets: [us_equity]
+
+env:
+  rebalance_every: 1
+  action_floor: 0.0
+  action_cap: 1.0
+  allow_leverage: false
+  observe_regime: probs
+  reward:
+    goal_bonus: 1.0
+    shortfall_penalty: 1.0
+    overshoot_credit: 0.05
+    turnover_penalty: 0.02
+    drawdown_penalty: 0.0
+    step_shaping: 0.0
+    utility: threshold
+    risk_aversion: 3.0
+
+simulation:
+  n_episodes: 1000
+  antithetic: true
+
+hmm:
+  n_states: 4
+  covariance_type: full
+  n_iter: 200
+  lookback_steps: 12
+  min_history: 6
+
+agents:
+  glide_path:
+    start_equity: 0.90
+    end_equity: 0.30
+  g_learner:
+    n_wealth_bins: 151          # a touch coarser than the single-asset default so
+    n_actions: 21               # the yearly walk-forward re-solves stay snappy
+    gamma: 0.999
+    beta: 15.0
+    greedy: true
+    reward_scale: 1.0
+  # Cross-asset risk aversion for the analytic regime-aware mean-variance split
+  # (higher => more diversified / less concentrated tilts).
+  multi_asset:
+    cross_asset_risk_aversion: 8.0
+    max_weight_per_asset: 0.70
+  ppo:
+    total_timesteps: 500000
+    learning_rate: 0.0003
+    n_steps: 2048
+    batch_size: 256
+    gamma: 0.999
+  sac:
+    total_timesteps: 300000
+    learning_rate: 0.0003
+    batch_size: 256
+    gamma: 0.999
+
+data:
+  cache_dir: data/cache
+  equity_ticker: SPY
+  benchmark_tickers: [SPY, VGTSX, VBMFX, GC=F]
+  fred_series: [DGS10, VIXCLS, UNRATE, CPIAUCSL]
+  start: "2000-09-01"
+
+paths:
+  artifacts: artifacts
+  checkpoints: artifacts/checkpoints
