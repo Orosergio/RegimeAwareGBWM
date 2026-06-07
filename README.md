@@ -59,7 +59,17 @@ wealth and your goal*, and *the detected market regime* at once.
   (past data only). See **`HISTORY.md`**.
 - **Explainability**: plain-language explanations of agent decisions (rule-based
   by default; LLM provider pluggable).
-- **Streamlit demo** deployable to Streamlit Cloud (loads pre-trained checkpoints).
+- **Live Bank sandbox** (`gbwm.sandbox`): an interactive, step-by-step paper-trading bank.
+  Open one or more wallets (default 30,000 NT$), let the goal-based RL allocator decide the
+  allocation each month, and **deposit/withdraw** capital at will — over real public market
+  history (no look-ahead) or a Monte-Carlo *simulated future*. Fully **transparent**: a
+  month-by-month **decision & trade log** records what it saw, how much money it moved into/out
+  of each asset, and *why*; a buy-&-hold benchmark, opt-in trading costs, Sharpe/drawdown
+  metrics, a wallet leaderboard, CSV export and JSON save/load round out the bank. No real
+  money; the engine reproduces the validated backtest exactly (`tests/test_sandbox.py`).
+- **Streamlit demo** deployable to Streamlit Cloud (loads pre-trained checkpoints). English UI;
+  every tab opens with a plain-language "what you'll see here" intro, and a **📖 How it works**
+  guide tab explains the whole project (and where RL is used) for a smart 10-year-old.
 
 ---
 
@@ -162,9 +172,12 @@ max drawdown), the month-by-month allocation, the real-time regime belief, and a
 The Streamlit app is written for everyday users — plain language, no jargon. It
 has one-click **goal presets** (retirement, house, tuition, emergency fund), a
 headline **recommendation** ("your best shot is X — about Y% chance"), a
-walkthrough of a sample journey with plain explanations, and a **🕰️ Time machine**
+walkthrough of a sample journey with plain explanations, a **🕰️ Time machine**
 tab that replays real market history since 1999 (no look-ahead) so you can see how
-each plan would have navigated the dot-com crash, the GFC and COVID.
+each plan would have navigated the dot-com crash, the GFC and COVID, and a
+**🏦 Live Bank (NT$)** tab — a simulated bank you *play* with: open wallets,
+deposit/withdraw, and watch the RL agent allocate month by month in real time,
+with a transparent log of every move and *why* it made it.
 
 > ⚠️ **Educational simulation — not financial advice.** It explores assumptions
 > under a simplified market model (GBM + regimes); it does not predict markets,

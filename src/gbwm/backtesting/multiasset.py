@@ -59,17 +59,17 @@ class AssetSpec:
 # Preferred proxies chosen for the *longest* clean history (verified on Yahoo):
 #   SPY 1993 · VGTSX 1996 · VBMFX 1990 · GC=F 2000-08  -> common start ~2000-09.
 MULTI_ASSET_UNIVERSE: list[AssetSpec] = [
-    AssetSpec("us_equity", "S&P 500 (EE.UU.)", "SPY", "^GSPC",
-              "Las 500 grandes empresas de EE.UU. — el motor de crecimiento.",
+    AssetSpec("us_equity", "S&P 500 (US)", "SPY", "^GSPC",
+              "The 500 biggest US companies — the growth engine.",
               "1993-01-29"),
-    AssetSpec("intl_equity", "Acciones internacionales", "VGTSX", "EFA",
-              "Bolsa desarrollada fuera de EE.UU. (Europa, Japón…) — diversifica el país.",
+    AssetSpec("intl_equity", "International stocks", "VGTSX", "EFA",
+              "Developed markets outside the US (Europe, Japan…) — diversifies across countries.",
               "1996-04-29"),
-    AssetSpec("bonds", "Bonos (renta fija)", "VBMFX", "AGG",
-              "Bonos de EE.UU. — el lastre estabilizador; suelen subir cuando la bolsa cae.",
+    AssetSpec("bonds", "Bonds (fixed income)", "VBMFX", "AGG",
+              "US bonds — the stabilizing ballast; they often rise when stocks fall.",
               "1990-01-02"),
-    AssetSpec("gold", "Oro", "GC=F", "GLD",
-              "Oro — refugio clásico: brilla en pánico e inflación.",
+    AssetSpec("gold", "Gold", "GC=F", "GLD",
+              "Gold — the classic safe haven: it shines in panics and inflation.",
               "2000-08-30"),
 ]
 
@@ -169,11 +169,11 @@ def fetch_asset_panel(
 # --------------------------------------------------------------------------- #
 # Strategies compared in the multi-asset demo
 # --------------------------------------------------------------------------- #
-# Spanish display labels for the three portfolios (policy.name -> label).
+# Display labels for the three portfolios (policy.name -> label).
 STRATEGY_LABELS = {
-    "Regime-Aware Multi-Asset": "Plan inteligente (multi-activo)",
-    "Balanced Mix": "Cartera clásica equilibrada",
-    "All-in S&P 500": "Todo en S&P 500",
+    "Regime-Aware Multi-Asset": "Smart plan (multi-asset)",
+    "Balanced Mix": "Classic balanced portfolio",
+    "All-in S&P 500": "All-in S&P 500",
 }
 
 # A classic balanced multi-asset mix over [us_equity, intl_equity, bonds, gold].
@@ -454,7 +454,7 @@ def run_multi_asset_deployment(
 # --------------------------------------------------------------------------- #
 def multi_asset_diary(dep: MultiAssetDeployment,
                       smart: str = "Regime-Aware Multi-Asset") -> list[str]:
-    """Plain-Spanish lines on how the smart plan rotated into bonds/gold at each
+    """Plain-English lines on how the smart plan rotated into bonds/gold at each
     in-window crisis (display only — the agent discovered each crash online)."""
     from gbwm.backtesting.historical import CRISES
 
@@ -476,10 +476,10 @@ def multi_asset_diary(dep: MultiAssetDeployment,
         seg = sp_price[a:b + 2]
         mkt = float(seg.min() / seg.max() - 1.0) if seg.size else 0.0
         out.append(
-            f"**{cr.name}** ({dates[a]:%b %Y}–{dates[b]:%b %Y}): el S&P cayó "
-            f"{abs(mkt) * 100:.0f}%. El plan inteligente recortó la bolsa del "
-            f"{stock[a] * 100:.0f}% al {stock[a:b + 1].min() * 100:.0f}% y elevó "
-            f"bonos+oro hasta el {safe[a:b + 1].max() * 100:.0f}% (creencia de mal "
-            f"tiempo máx. {rb[a:b + 1].max() * 100:.0f}%)."
+            f"**{cr.name}** ({dates[a]:%b %Y}–{dates[b]:%b %Y}): the S&P fell "
+            f"{abs(mkt) * 100:.0f}%. The smart plan cut stocks from "
+            f"{stock[a] * 100:.0f}% to {stock[a:b + 1].min() * 100:.0f}% and lifted "
+            f"bonds+gold up to {safe[a:b + 1].max() * 100:.0f}% (bad-weather belief "
+            f"peaked at {rb[a:b + 1].max() * 100:.0f}%)."
         )
     return out
