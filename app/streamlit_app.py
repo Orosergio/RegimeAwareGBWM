@@ -3,12 +3,14 @@
 Styled to match the CME 241 proposal deck (docs/): Geist + Instrument Serif,
 warm paper / ink palette, goal-green / risk-amber / RL-blue / loss-red accents.
 
-Tabs (in reading order): How it works · Your plan · Live Bank (NT$) · Compare ·
-Your journey · Time machine · Multi-asset · How the AI learns · Simple analogy ·
-Proposal coverage. Every tab opens with a plain-English "what you'll see here"
-intro. The Live Bank is a step-by-step simulated bank (deposit/withdraw into
-wallets) driven live by the goal-based RL allocator, with a fully transparent
-month-by-month decision & trade log.
+Navigation is a guided story in three phases — Learn (How it works · Inside the
+AI) → Play (Your plan · Live bank NT$ · One journey) → Proof (Compare · Time
+machine · Multi-asset · Proposal coverage). One page renders at a time (stateful
+nav, not st.tabs) so each screen has a single focus, "Next" buttons really
+navigate, and heavy pages only compute when visited. "How it works" opens with a
+live demo that queries the actual learned policy. The Live Bank is a step-by-step
+simulated bank (deposit/withdraw into wallets) driven live by the goal-based RL
+allocator, with a fully transparent month-by-month decision & trade log.
 
 Educational simulation — NOT financial advice. Run:  streamlit run app/streamlit_app.py
 """
@@ -54,47 +56,197 @@ ADVISOR = RuleBasedAdvisor()
 # Auto-play needs st.fragment(run_every=…) (Streamlit ≥1.37); degrade gracefully if absent.
 _HAS_RUN_EVERY = "run_every" in inspect.signature(st.fragment).parameters
 
-# ---- deck style (Geist / Instrument Serif / Geist Mono + palette) ---------- #
+# ---- design system (warm editorial / quiet-luxury; hand-tuned, not "AI slop") #
+# Preconnect to Google Fonts so the @import below resolves its connection sooner (faster first paint).
+st.markdown(
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    unsafe_allow_html=True,
+)
 st.markdown(
     """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+:root{
+  --paper:#f7f4ee; --card:#fffdf8; --ink:#15120d; --muted-strong:#6a6157;
+  --line:rgba(21,18,13,.12); --hair:rgba(21,18,13,.07);
+  --accent:#1c6b50; --accent-soft:rgba(28,107,80,.10);
+  --shadow:0 1px 2px rgba(21,18,13,.03), 0 14px 34px -22px rgba(21,18,13,.28);
+  --shadow-lift:0 1px 2px rgba(21,18,13,.04), 0 22px 48px -24px rgba(21,18,13,.36);
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
 html, body, [class*="css"], .stApp, .stMarkdown, p, div, span, label { font-family: 'Geist', system-ui, sans-serif; }
-.stApp { background: #fafaf7; }
-h1, h2, h3, h4 { font-family: 'Geist', sans-serif; letter-spacing: -0.025em; color: #0a0b0d; font-weight: 600; }
-h1 { letter-spacing: -0.035em; }
-[data-testid="stMetricValue"] { font-weight: 600; letter-spacing: -0.02em; color: #0a0b0d; }
-.stTabs [data-baseweb="tab-list"] { gap: 6px; flex-wrap: wrap; }
-.stTabs [data-baseweb="tab"] { font-weight: 500; }
-.gbwm-eyebrow { font-family: 'Geist Mono', monospace; font-size: 0.78rem; letter-spacing: 0.20em;
-  text-transform: uppercase; color: #6b6b66; }
-.gbwm-serif { font-family: 'Instrument Serif', serif; font-style: italic; letter-spacing: -0.01em; }
-.gbwm-card { border: 1px solid rgba(10,11,13,0.12); border-radius: 16px; padding: 16px 18px;
-  background: #ffffff; height: 100%; box-shadow: 0 10px 30px -20px rgba(10,11,13,0.25); }
-.gbwm-card .lbl { font-family: 'Geist Mono', monospace; font-size: 0.70rem; letter-spacing: 0.16em;
-  text-transform: uppercase; color: #6b6b66; }
-.gbwm-card .val { font-size: 1.0rem; margin-top: 6px; line-height: 1.45; color: #0a0b0d; }
-.gbwm-card .ico { font-size: 1.3rem; }
-/* simple per-tab intro callout */
-.gbwm-intro { border-radius: 14px; padding: 14px 18px; margin: 2px 0 18px 0;
-  background: linear-gradient(135deg, rgba(43,108,176,0.08), rgba(43,108,176,0.02));
-  border: 1px solid rgba(43,108,176,0.18); border-left: 4px solid #2b6cb0; }
-.gbwm-intro .t { font-weight: 600; font-size: 1.02rem; color: #0a0b0d; margin-bottom: 3px; }
-.gbwm-intro .d { font-size: 0.95rem; color: #3a3a36; line-height: 1.5; }
-.gbwm-intro ul { margin: 8px 0 0 0; padding-left: 1.1rem; }
-.gbwm-intro li { font-size: 0.92rem; color: #3a3a36; margin: 2px 0; }
-/* an RL "where the brain works" badge */
-.gbwm-rl { display:inline-block; background: rgba(43,108,176,0.12); color:#2b6cb0;
-  border:1px solid rgba(43,108,176,0.30); border-radius:8px; padding:2px 8px; font-weight:600;
-  font-size:0.80rem; }
-/* weather / regime pill */
-.gbwm-pill { display: inline-block; padding: 5px 14px; border-radius: 999px;
-  font-weight: 600; font-size: 0.95rem; border: 1px solid rgba(10,11,13,0.12); }
-/* big balance odometer */
-.gbwm-odo { font-family: 'Geist Mono', monospace; font-weight: 600; letter-spacing: -0.02em;
-  font-size: 2.1rem; color: #0a0b0d; line-height: 1.1; }
-.gbwm-odo .cur { font-size: 1.1rem; color: #6b6b66; margin-right: 6px; }
-.gbwm-sub { font-size: 0.82rem; color: #6b6b66; }
+.stApp { background: var(--paper); color: var(--ink); }
+[data-testid="stHeader"] { background: transparent; }
+.block-container { padding-top: 2.6rem; max-width: 1200px; }
+::selection { background: var(--accent-soft); }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: rgba(21,18,13,.30); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(21,18,13,.48); }
+
+/* ---- type scale ---- */
+h1, h2, h3, h4 { font-family: 'Geist', sans-serif; color: var(--ink); font-weight: 600; letter-spacing: -.025em; }
+h1 { font-size: 2.55rem; line-height: 1.05; letter-spacing: -.042em; margin: .15rem 0 .35rem; }
+h2 { font-size: 1.5rem; letter-spacing: -.03em; }
+h3 { font-size: 1.16rem; }
+.stMarkdown p, .stMarkdown li { color: #423c33; line-height: 1.6; }
+.gbwm-serif { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; letter-spacing: -.005em; }
+.gbwm-eyebrow { font-family: 'Geist Mono', monospace; font-size: .72rem; letter-spacing: .24em;
+  text-transform: uppercase; color: var(--muted-strong); }
+.gbwm-sub { font-family: 'Geist Mono', monospace; font-size: .72rem; letter-spacing: .15em;
+  text-transform: uppercase; color: var(--muted-strong); }
+
+/* ---- metrics (tabular numerals, quiet card) ---- */
+[data-testid="stMetric"] { background: var(--card); border: 1px solid var(--hair); border-radius: 12px; padding: 12px 15px; }
+[data-testid="stMetricValue"] { font-family: 'Geist Mono', monospace; font-weight: 600; letter-spacing: -.02em;
+  color: var(--ink); font-variant-numeric: tabular-nums; }
+[data-testid="stMetricLabel"] p { color: var(--muted-strong); font-size: .82rem; }
+
+/* ---- tabs: quiet underline, no chrome ---- */
+.stTabs [data-baseweb="tab-list"] { gap: 1px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.stTabs [data-baseweb="tab"] { font-weight: 500; color: var(--muted-strong); padding: 9px 13px;
+  border-radius: 9px 9px 0 0; transition: color .16s var(--ease), background .16s var(--ease); }
+.stTabs [data-baseweb="tab"]:hover { color: var(--ink); background: rgba(21,18,13,.035); }
+.stTabs [aria-selected="true"] { color: var(--ink) !important; }
+.stTabs [data-baseweb="tab-highlight"] { background: var(--accent) !important; height: 2px; }
+.stTabs [data-baseweb="tab-border"] { background: transparent; }
+
+/* ---- cards ---- */
+.gbwm-card { position: relative; border: 1px solid var(--hair); border-radius: 14px; padding: 16px 18px;
+  background: var(--card); height: 100%; box-shadow: var(--shadow);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease); }
+.gbwm-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line); }
+.gbwm-card .ico { font-size: 1.22rem; opacity: .92; }
+.gbwm-card .lbl { font-family: 'Geist Mono', monospace; font-size: .66rem; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--muted-strong); margin-top: 9px; }
+.gbwm-card .val { font-size: 1.0rem; margin-top: 5px; line-height: 1.45; color: var(--ink); }
+.gbwm-card .dot { position: absolute; top: 16px; right: 16px; width: 7px; height: 7px; border-radius: 50%; }
+
+/* ---- intro callout: refined paper card, full hairline box (no side-stripe) ---- */
+.gbwm-intro { position: relative; border: 1px solid var(--hair);
+  border-radius: 12px; padding: 15px 18px; margin: 4px 0 22px; background: var(--card); box-shadow: var(--shadow); }
+.gbwm-intro .t { font-weight: 600; font-size: 1.05rem; letter-spacing: -.012em; color: var(--ink); margin-bottom: 4px; }
+.gbwm-intro .d { font-size: .95rem; color: #423c33; line-height: 1.58; }
+.gbwm-intro ul { margin: 10px 0 0; padding-left: 1.05rem; }
+.gbwm-intro li { font-size: .9rem; color: #534b41; margin: 4px 0; line-height: 1.5; }
+.gbwm-intro strong { font-weight: 600; color: var(--ink); }
+
+/* ---- RL badge (quiet, monospace) ---- */
+.gbwm-rl { display: inline-block; background: transparent; color: var(--accent);
+  border: 1px solid rgba(28,107,80,.34); border-radius: 6px; padding: 1px 7px;
+  font-family: 'Geist Mono', monospace; font-weight: 600; font-size: .72rem; letter-spacing: .03em; }
+
+/* ---- weather pill ---- */
+.gbwm-pill { display: inline-block; padding: 5px 14px; border-radius: 999px; font-weight: 600;
+  font-size: .92rem; border: 1px solid var(--hair); }
+
+/* ---- balance odometer ---- */
+.gbwm-odo { font-family: 'Geist Mono', monospace; font-weight: 600; letter-spacing: -.02em;
+  font-size: 2.2rem; color: var(--ink); line-height: 1.04; font-variant-numeric: tabular-nums; }
+.gbwm-odo .cur { font-size: 1.05rem; color: var(--muted-strong); margin-right: 6px; font-weight: 500; }
+
+/* ---- buttons ---- */
+.stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
+  border-radius: 10px; border: 1px solid var(--line); font-weight: 500; box-shadow: none;
+  transition: transform .15s var(--ease), border-color .15s var(--ease), background .15s var(--ease); }
+.stButton > button:hover, .stDownloadButton > button:hover, .stFormSubmitButton > button:hover {
+  border-color: var(--ink); transform: translateY(-1px); }
+.stButton > button:active, .stDownloadButton > button:active { transform: translateY(0); }
+button[kind="primary"], button[kind="primaryFormSubmit"] {
+  background: var(--ink) !important; color: var(--paper) !important; border-color: var(--ink) !important; }
+button[kind="primary"]:hover, button[kind="primaryFormSubmit"]:hover { background: #000 !important; }
+/* ---- visible keyboard focus (native chrome was stripped above) ---- */
+.stButton > button:focus-visible, .stDownloadButton > button:focus-visible,
+.stFormSubmitButton > button:focus-visible, .stTabs [data-baseweb="tab"]:focus-visible,
+[role="switch"]:focus-visible, [data-testid="stSidebar"] a:focus-visible {
+  outline: 2px solid var(--accent) !important; outline-offset: 2px; border-radius: 8px; }
+[data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within {
+  outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ---- inputs ---- */
+.stNumberInput input, .stTextInput input, [data-baseweb="select"] > div { border-radius: 10px !important; }
+[data-baseweb="input"]:focus-within, [data-baseweb="select"] > div:focus-within { border-color: var(--accent) !important; }
+
+/* ---- containers ---- */
+[data-testid="stDataFrame"] { border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; }
+[data-testid="stExpander"] { border: 1px solid var(--hair) !important; border-radius: 12px !important;
+  background: var(--card); box-shadow: var(--shadow); }
+[data-testid="stExpander"] summary { font-weight: 500; }
+[data-testid="stExpander"] summary:hover { color: var(--accent); }
+hr { border-color: var(--line) !important; margin: 1.1rem 0; }
+[data-testid="stProgress"] div[role="progressbar"] > div { background: var(--accent) !important; }
+[data-testid="stProgress"] div[role="progressbar"] { background: rgba(21,18,13,.08) !important; }
+
+/* ---- sidebar ---- */
+[data-testid="stSidebar"] { background: #efebe1; border-right: 1px solid var(--line); }
+[data-testid="stSidebar"] .stMarkdown p { color: #534b41; }
+
+/* ---- alerts: soften the default chrome ---- */
+[data-testid="stAlert"] { border-radius: 12px; border: 1px solid var(--hair); }
+
+/* ---- links: keep the warm accent, not default blue ---- */
+.stMarkdown a, .gbwm-intro a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---- page navigation: the nav radios become quiet pills (radio dot collapsed,
+       input kept zero-size so keyboard focus still works) ---- */
+.st-key-nav_phase [role="radiogroup"], [class*="st-key-nav_page"] [role="radiogroup"] { gap: 6px; flex-wrap: wrap; }
+.st-key-nav_phase label[data-baseweb="radio"], [class*="st-key-nav_page"] label[data-baseweb="radio"] {
+  border: 1px solid transparent; border-radius: 999px; padding: 4px 14px; margin: 0 2px 0 0;
+  transition: background .16s var(--ease), border-color .16s var(--ease); }
+.st-key-nav_phase label[data-baseweb="radio"] > div:first-child,
+[class*="st-key-nav_page"] label[data-baseweb="radio"] > div:first-child {
+  width: 0 !important; height: 0 !important; opacity: 0; margin: 0; overflow: hidden; }
+.st-key-nav_phase label[data-baseweb="radio"]:hover,
+[class*="st-key-nav_page"] label[data-baseweb="radio"]:hover { background: rgba(21,18,13,.045); }
+.st-key-nav_phase label[data-baseweb="radio"]:focus-within,
+[class*="st-key-nav_page"] label[data-baseweb="radio"]:focus-within {
+  outline: 2px solid var(--accent); outline-offset: 2px; }
+.st-key-nav_phase label[data-baseweb="radio"]:has(input:checked) { background: var(--ink); border-color: var(--ink); }
+.st-key-nav_phase label[data-baseweb="radio"]:has(input:checked) p { color: var(--paper) !important; }
+.st-key-nav_phase p { font-weight: 600; }
+[class*="st-key-nav_page"] label[data-baseweb="radio"]:has(input:checked) {
+  background: var(--accent-soft); border-color: rgba(28,107,80,.35); }
+[class*="st-key-nav_page"] label[data-baseweb="radio"]:has(input:checked) p {
+  color: var(--accent) !important; font-weight: 600; }
+
+/* ---- chart-reading keys: tiny swatch + label, sits right under its figure ---- */
+.gbwm-keys { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 2px 0 4px; }
+.gbwm-keys .k { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: #534b41; }
+.gbwm-keys .sw { width: 14px; height: 4px; border-radius: 2px; flex: none; }
+.gbwm-keys .sw.dash { height: 3px; border-radius: 0;
+  background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px); }
+
+/* ---- the verdict block: the ONE loud element on "Your plan" ---- */
+.gbwm-verdict { border: 1px solid rgba(28,107,80,.30); background: rgba(28,107,80,.07);
+  border-radius: 14px; padding: 18px 22px; box-shadow: var(--shadow);
+  display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+.gbwm-verdict .cap { font-family: 'Geist Mono', monospace; font-size: .68rem; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--muted-strong); margin-bottom: 6px; }
+.gbwm-verdict .big { font-family: 'Geist Mono', monospace; font-weight: 600; font-size: 2.7rem;
+  line-height: 1; color: var(--accent); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.gbwm-verdict .body { flex: 1 1 320px; min-width: 260px; line-height: 1.55; }
+.gbwm-verdict .deltas { font-family: 'Geist Mono', monospace; font-size: .78rem;
+  color: var(--muted-strong); letter-spacing: .02em; }
+
+/* ---- stocks/cash split bar for the live decision demo ---- */
+.gbwm-bar { display: flex; height: 16px; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--hair); background: #e9e4d8; margin: 8px 0 4px; }
+.gbwm-bar .seg { height: 100%; }
+
+/* ---- captions: the app's pedagogy lives in the small print, so keep it readable (AA) ---- */
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { color: #5f574c !important; }
+
+/* ---- reduced motion: honor the OS preference ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  .gbwm-card:hover { transform: none; }
+}
+
+/* ---- small screens: tighten padding so the dense tabs breathe ---- */
+@media (max-width: 640px) {
+  .block-container { padding-top: 1.4rem; padding-left: .8rem; padding-right: .8rem; }
+  h1 { font-size: 2rem; }
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -125,12 +277,55 @@ def intro(title: str, desc: str, bullets: list[str] | None = None):
 
 
 def card(col, icon: str, label: str, value: str, accent: str):
+    ico = f'<div class="ico">{icon}</div>' if icon else ""
     col.markdown(
-        f'<div class="gbwm-card" style="border-top:3px solid {accent}">'
-        f'<div class="ico">{icon}</div><div class="lbl">{label}</div>'
+        f'<div class="gbwm-card"><span class="dot" style="background:{accent}"></span>'
+        f'{ico}<div class="lbl">{label}</div>'
         f'<div class="val">{value}</div></div>',
         unsafe_allow_html=True,
     )
+
+
+def show_fig(fig, container=None):
+    """Render a matplotlib figure and close it (the app reruns often; unclosed
+    figures accumulate in matplotlib's registry and leak memory)."""
+    (container or st).pyplot(fig)
+    plots.plt.close(fig)
+
+
+def chart_keys(*items, container=None):
+    """A compact 'how to read this chart' key row, placed right under its figure.
+
+    Each item is ``(color, text)`` or ``(color, text, "dash")``; color ``None``
+    renders text only."""
+    chips = []
+    for it in items:
+        color, text = it[0], it[1]
+        dash = len(it) > 2 and it[2] == "dash"
+        if color is None:
+            sw = ""
+        elif dash:
+            sw = f'<span class="sw dash" style="color:{color}"></span>'
+        else:
+            sw = f'<span class="sw" style="background:{color}"></span>'
+        chips.append(f'<span class="k">{sw}{_emph(text)}</span>')
+    (container or st).markdown(f'<div class="gbwm-keys">{"".join(chips)}</div>',
+                               unsafe_allow_html=True)
+
+
+def goto(page_key: str):
+    """Navigate to another page on the next rerun (handled before the nav widgets)."""
+    st.session_state["_goto"] = page_key
+    st.rerun()
+
+
+def next_step(target: str, blurb: str, key: str):
+    """The guided-story footer: one primary 'Next' action + why it's next."""
+    st.divider()
+    c = st.columns([1.15, 2.2])
+    if c[0].button(f"Next: {PAGE_LABEL[target]}", type="primary", key=key, width="stretch"):
+        goto(target)
+    c[1].caption(blurb)
 
 
 # --------------------------------------------------------------------------- #
@@ -141,10 +336,11 @@ def ntd(x): return f"NT$ {x:,.0f}"
 
 # Regime → friendly "weather" with emoji + accent color (kid-simple).
 WEATHER = {
-    "bull": ("Sunny", "☀️", "#2f855a", "rgba(47,133,90,0.12)"),
-    "stable": ("Calm", "🌤️", "#2b6cb0", "rgba(43,108,176,0.12)"),
-    "high_vol": ("Choppy", "🌧️", "#b7791f", "rgba(183,121,31,0.14)"),
-    "bear": ("Stormy", "⛈️", "#c53030", "rgba(197,48,48,0.12)"),
+    # text colors are darkened so each pill clears WCAG AA (4.5:1) on its own tint.
+    "bull": ("Sunny", "☀️", "#1c6340", "rgba(47,133,90,0.12)"),
+    "stable": ("Calm", "🌤️", "#1f5288", "rgba(43,108,176,0.12)"),
+    "high_vol": ("Choppy", "🌧️", "#7e5210", "rgba(183,121,31,0.14)"),
+    "bear": ("Stormy", "⛈️", "#922424", "rgba(197,48,48,0.12)"),
 }
 
 
@@ -160,12 +356,35 @@ def risk_word(equity: float) -> str:
 
 # ---- sandbox figures ------------------------------------------------------- #
 _ALLOC_COLORS = [RL, "#7048e8", GOAL, RISK, "#0d9488", "#be185d"]
+_NEUTRAL = "#bcb6a8"  # one shared warm-neutral for cash / non-highlighted bars (replaces 3 different greys)
 
 
 def _plain(label: str) -> str:
     """Drop emoji/flags so matplotlib's font (no emoji glyphs) renders cleanly."""
     drop = {0xFE0F, 0x200D, 0x20E3}
     return "".join(ch for ch in label if ord(ch) < 0x1F000 and ord(ch) not in drop).strip()
+
+
+def _finish_fig(fig, ax, *, legend=True):
+    """Hand-tuned chart polish: transparent canvas (blends on paper or card),
+    despined axes, hairline grid and muted ink — an editorial, non-default look."""
+    fig.patch.set_alpha(0.0)
+    for a in (ax if isinstance(ax, (list, tuple)) else [ax]):
+        a.patch.set_alpha(0.0)
+        for side in ("top", "right"):
+            a.spines[side].set_visible(False)
+        for side in ("left", "bottom"):
+            a.spines[side].set_color("#cbc6bb"); a.spines[side].set_linewidth(0.9)
+        a.tick_params(colors="#5f574c", labelsize=8.5, length=3)
+        a.yaxis.label.set_color("#5f574c"); a.xaxis.label.set_color("#5f574c")
+        a.title.set_color("#15120d"); a.title.set_fontsize(11.5); a.title.set_fontweight("600")
+        a.grid(axis="y", color="#15120d", alpha=0.06, lw=0.8)
+        a.set_axisbelow(True)
+        if legend and a.get_legend_handles_labels()[0]:
+            leg = a.legend(loc="upper left", fontsize=8, frameon=False)
+            for t in leg.get_texts():
+                t.set_color("#534b41")
+    return fig
 
 
 def plot_balance(session) -> "plots.plt.Figure":
@@ -186,23 +405,31 @@ def plot_balance(session) -> "plots.plt.Figure":
                        marker="^" if amt > 0 else "v",
                        edgecolor="white", linewidth=0.8)
     ax.set(xlabel="months played", ylabel=f"balance ({session.currency})")
-    ax.set_title("Your balance, month by month"); ax.legend(loc="upper left", fontsize=8)
-    fig.tight_layout(); return fig
+    ax.set_title("Your balance, month by month")
+    _finish_fig(fig, ax); fig.tight_layout(); return fig
 
 
 def plot_allocation_bar(session) -> "plots.plt.Figure":
     """Horizontal bar of where the model puts the money right now."""
     alloc = session.current_allocation()
     labels = list(alloc.keys()); vals = list(alloc.values())
-    colors = [_ALLOC_COLORS[i % len(_ALLOC_COLORS)] for i in range(len(labels) - 1)] + ["#a0aec0"]
+    colors = [_ALLOC_COLORS[i % len(_ALLOC_COLORS)] for i in range(len(labels) - 1)] + [_NEUTRAL]
     fig = plots.plt.figure(figsize=(7, 0.55 * len(labels) + 0.9)); ax = fig.add_subplot(111)
     y = range(len(labels))
-    ax.barh(list(y), vals, color=colors, edgecolor="white")
+    ax.barh(list(y), vals, color=colors, edgecolor="#f7f4ee", linewidth=1.2, height=0.66)
     for i, v in enumerate(vals):
-        ax.text(min(v + 0.01, 0.97), i, f"{v * 100:.0f}%", va="center", fontsize=9)
+        ax.text(min(v + 0.012, 0.965), i, f"{v * 100:.0f}%", va="center", fontsize=9,
+                color="#534b41", fontweight="500")
     ax.set_yticks(list(y)); ax.set_yticklabels([_plain(lb) for lb in labels], fontsize=9.5)
     ax.set_xlim(0, 1); ax.invert_yaxis(); ax.set_xlabel("share of your money")
-    ax.set_title("Where the model invests right now"); fig.tight_layout(); return fig
+    ax.set_title("Where the model invests right now")
+    fig.patch.set_alpha(0.0); ax.patch.set_alpha(0.0)
+    for s in ("top", "right", "left", "bottom"):
+        ax.spines[s].set_visible(False)
+    ax.tick_params(colors="#534b41", length=0); ax.set_xticks([])
+    ax.xaxis.label.set_color("#5f574c"); ax.title.set_color("#15120d")
+    ax.title.set_fontsize(11.5); ax.title.set_fontweight("600")
+    fig.tight_layout(); return fig
 
 
 def plot_asset_money(session) -> "plots.plt.Figure | None":
@@ -212,12 +439,17 @@ def plot_asset_money(session) -> "plots.plt.Figure | None":
         return None
     x = range(1, M.shape[0] + 1)
     labels = [_plain(lb) for lb in session.asset_labels] + ["Cash"]
-    colors = [_ALLOC_COLORS[i % len(_ALLOC_COLORS)] for i in range(M.shape[1] - 1)] + ["#cbd5e0"]
+    colors = [_ALLOC_COLORS[i % len(_ALLOC_COLORS)] for i in range(M.shape[1] - 1)] + [_NEUTRAL]
     fig = plots.plt.figure(figsize=(8, 3.0)); ax = fig.add_subplot(111)
-    ax.stackplot(list(x), M.T, labels=labels, colors=colors, alpha=0.92)
+    ax.stackplot(list(x), M.T, labels=labels, colors=colors, alpha=0.9)
     ax.set(xlabel="months played", ylabel=f"money held ({session.currency})")
     ax.set_title("How your money is split across assets, over time")
-    ax.legend(loc="upper left", fontsize=7, ncol=max(1, (M.shape[1] + 1) // 2))
+    ax.margins(x=0)
+    _finish_fig(fig, ax)
+    leg = ax.legend(loc="upper left", fontsize=7.5, frameon=False,
+                    ncol=max(1, (M.shape[1] + 1) // 2))
+    for t in leg.get_texts():
+        t.set_color("#534b41")
     fig.tight_layout(); return fig
 
 
@@ -324,21 +556,30 @@ def goal_chance_chart(pgoals):
     order = sorted(pgoals, key=pgoals.get)
     fig = plots.plt.figure(figsize=(7, 3.2)); ax = fig.add_subplot(111)
     vals = [pgoals[n] for n in order]
-    colors = [GOAL if n == order[-1] else "#b9c6dd" for n in order]
-    ax.barh(range(len(order)), vals, color=colors)
+    # winner = green; the deck's named baseline (glide path) = amber so it never
+    # disappears into the neutral pack; everything else = quiet sand.
+    colors = [GOAL if n == order[-1] else (RISK if n == "Glide Path" else _NEUTRAL) for n in order]
+    ax.barh(range(len(order)), vals, color=colors, edgecolor="#f7f4ee", linewidth=1.2, height=0.66)
     for i, v in enumerate(vals):
-        ax.text(min(v + 0.02, 0.98), i, pct(v), va="center", fontsize=9)
-    ax.set_yticks(range(len(order))); ax.set_yticklabels([FRIENDLY_NAME.get(n, n) for n in order], fontsize=9)
+        ax.text(min(v + 0.02, 0.985), i, pct(v), va="center", fontsize=9, color="#534b41", fontweight="500")
+    ax.set_yticks(range(len(order))); ax.set_yticklabels([FRIENDLY_NAME.get(n, n) for n in order], fontsize=9.5)
     ax.set_xlim(0, 1); ax.set_xlabel("chance of reaching your goal")
-    ax.set_title("Which plan gives you the best chance?"); fig.tight_layout()
-    return fig
+    ax.set_title("Which plan gives you the best chance?")
+    # editorial polish to match the rest of the app (transparent canvas, no spines, no x-axis chrome)
+    fig.patch.set_alpha(0.0); ax.patch.set_alpha(0.0)
+    for s in ("top", "right", "left", "bottom"):
+        ax.spines[s].set_visible(False)
+    ax.tick_params(colors="#534b41", length=0); ax.set_xticks([])
+    ax.xaxis.label.set_color("#5f574c"); ax.title.set_color("#15120d")
+    ax.title.set_fontsize(11.5); ax.title.set_fontweight("600")
+    fig.tight_layout(); return fig
 
 
 # --------------------------------------------------------------------------- #
-st.sidebar.title("🎯 Goal Planner")
+st.sidebar.title("Goal Planner")
 st.sidebar.caption("Maximize the *chance of reaching* a money goal — Regime-Aware GBWM with RL.")
-st.sidebar.info("New here? Open the **📖 How it works** tab first — it explains every section in "
-                "plain language.")
+st.sidebar.info("New here? Start at **Learn › How it works** and follow the **Next** button at the "
+                "bottom of each page — it walks you through the whole story.")
 for k, v in {"initial": 100_000, "target": 250_000, "horizon": 20, "contribution": 500}.items():
     st.session_state.setdefault(k, v)
 
@@ -355,41 +596,142 @@ st.sidebar.number_input("Money you have now ($)", 0, 50_000_000, key="initial", 
 st.sidebar.number_input("Goal amount ($)", 1_000, 100_000_000, key="target", step=10_000)
 st.sidebar.slider("Years until you need it", 1, 40, key="horizon")
 st.sidebar.number_input("Monthly savings ($)", 0, 100_000, key="contribution", step=100)
-with st.sidebar.expander("⚙️ Advanced assumptions"):
+st.sidebar.caption("These numbers drive **Your plan**, **One journey** and **Compare plans**. "
+                   "The Live bank's wallets (NT$) are set up on their own page.")
+with st.sidebar.expander("Advanced assumptions"):
     rf = st.slider("Safe-cash yearly return", 0.0, 0.08, 0.03, step=0.005)
     persistence = st.slider("How 'sticky' market moods are", 0.5, 0.99, 0.85, step=0.01)
     n_episodes = st.select_slider("How many futures to simulate", [500, 1000, 2000, 4000], value=1000)
 st.sidebar.divider()
-st.sidebar.caption("⚠️ Educational simulation — **not financial advice.**")
+st.sidebar.caption("Educational simulation — **not financial advice.** Based on the "
+                   "[2-minute pitch deck](https://orosergio.github.io/RegimeAwareGBWM/).")
 
 cfg = make_config(st.session_state.initial, st.session_state.target, st.session_state.horizon,
                   st.session_state.contribution, rf, persistence, n_episodes)
 key = cfg_key(cfg)
 target = float(st.session_state.target)
 
-(t_guide, t_plan, t_bank, t_cmp, t_journey, t_real, t_multi, t_ai, t_simple, t_cov) = st.tabs(
-    ["📖 How it works", "🎯 Your plan", "🏦 Live Bank (NT$)", "📊 Compare plans", "🔍 Your journey",
-     "🕰️ Time machine (1999→today)", "🌍 Multi-asset (live)", "🤖 How the AI learns",
-     "🧒 Simple analogy", "📋 Proposal coverage"]
-)
+# The learned policy surfaces, cached as plain arrays: the "How it works" live
+# demo reads them on every slider move, so lookups must be instant.
+@st.cache_data(show_spinner="Waking up the learned brain…")
+def policy_surfaces(key):
+    pols = build_policies(key)
+    ra = pols["Regime-Aware G-Learner"]
+    cfg_ = make_config(*key)
+    return ({r: ra.surface(r) for r in cfg_.market.regime_names},
+            pols["G-Learner"].surface(None), ra.w_grid)
+
+
+# Stateful page navigation — a guided story in three phases. One page renders at
+# a time (st.tabs rendered all ten bodies eagerly), so each screen keeps a single
+# focus, "Next" buttons can really navigate, and heavy pages only compute when
+# visited. Page blocks below are `if page == …:` — order in the file is layout-free.
+PHASES = [
+    ("Learn", [("how", "How it works"), ("brain", "Inside the AI")]),
+    ("Play", [("plan", "Your plan"), ("bank", "Live bank (NT$)"), ("journey", "One journey")]),
+    ("Proof", [("compare", "Compare plans"), ("history", "Time machine"),
+               ("multi", "Multi-asset"), ("coverage", "Proposal coverage")]),
+]
+PAGE_LABEL = {k: lbl for _, pages in PHASES for k, lbl in pages}
+PAGE_PHASE = {k: ph for ph, pages in PHASES for k, _ in pages}
+PHASE_PAGES = dict(PHASES)
+PHASE_BLURB = {
+    "Learn": "Start here — the idea, a live decision you control, and a look inside the brain.",
+    "Play": "Do it yourself, with fake money.",
+    "Proof": "The honest evidence — judged by calm (small crashes), not by luck.",
+}
+
+st.session_state.setdefault("page", "how")
+if "_goto" in st.session_state:  # a "Next" / "Open" button asked to navigate
+    _tgt = st.session_state.pop("_goto")
+    if _tgt in PAGE_LABEL:
+        st.session_state["page"] = _tgt
+        st.session_state["nav_phase"] = PAGE_PHASE[_tgt]
+        st.session_state[f"nav_page_{PAGE_PHASE[_tgt]}"] = PAGE_LABEL[_tgt]
+
+st.session_state.setdefault("nav_phase", PAGE_PHASE[st.session_state.page])
+phase = st.radio("Section", [ph for ph, _ in PHASES], key="nav_phase",
+                 horizontal=True, label_visibility="collapsed")
+_pp = PHASE_PAGES[phase]
+_key_by_label = {lbl: k for k, lbl in _pp}
+_default_lbl = (PAGE_LABEL[st.session_state.page]
+                if PAGE_PHASE[st.session_state.page] == phase else _pp[0][1])
+st.session_state.setdefault(f"nav_page_{phase}", _default_lbl)
+_sel = st.radio("Page", [lbl for _, lbl in _pp], key=f"nav_page_{phase}",
+                horizontal=True, label_visibility="collapsed")
+page = _key_by_label[_sel]
+st.session_state["page"] = page
+st.caption(PHASE_BLURB[phase])
 
 # --------------------------------------------------------------------------- 0
 # 📖 How it works — the guide / reading order (ELI10).
 # --------------------------------------------------------------------------- #
-with t_guide:
-    eyebrow("Start here · how this project works · plain language")
-    st.markdown('<h1>How this <span class="gbwm-serif">whole thing</span> works.</h1>',
+if page == "how":
+    eyebrow("Start here · what this project is · plain language")
+    st.markdown('<h1>Watch a computer learn to reach a <span class="gbwm-serif">money goal</span>.</h1>',
                 unsafe_allow_html=True)
-    intro("📖 Read me first",
-          "This project answers one question: **what's the smartest way to reach a money goal — "
-          "and how do you do it safely when the market gets scary?** A computer learns the answer "
-          "by playing the 'reach-your-goal' game thousands of times. That kind of learning-by-playing "
-          "is called **reinforcement learning (RL)**.",
-          ["Everything here is a **simulation** with **fake money** — never real money.",
-           "The fancy part (the **goal-based RL brain**) is marked with a blue "
-           "<span class='gbwm-rl'>RL</span> badge wherever it makes a decision."])
+    intro("Read me first",
+          "This app demonstrates one idea: **goal-based wealth management with reinforcement learning "
+          "(RL)**. A computer plays the 'reach-your-goal' game thousands of times and learns *how much "
+          "to risk each month* from three things: **time left**, the **gap to your goal**, and the "
+          "**market 'weather'** (sunny, calm, choppy or stormy).",
+          ["Everything here is a **simulation with fake money** — never real money, not financial advice.",
+           "Wherever the learned brain makes a decision you'll see the <span class='gbwm-rl'>RL</span> badge.",
+           "It's the working proof of <a href='https://orosergio.github.io/RegimeAwareGBWM/' "
+           "target='_blank'>the 2-minute pitch deck</a>."])
 
-    st.subheader("🧗 The big idea, like you're 10")
+    # ---- the centerpiece: poke the actual learned policy, live --------------- #
+    st.subheader("Try it — make the brain decide, right now")
+    st.caption("This queries the **actual learned policy** (not a script). Set a situation; see how much "
+               "it would risk. Change **only the weather** and watch the answer move — that one number "
+               "moving is the regime-aware part, the project's whole point.")
+    surf_by_reg, surf_blind, w_grid = policy_surfaces(key)
+    _wopts = list(surf_by_reg)
+    demo_regime = st.radio("Market weather right now", _wopts, index=len(_wopts) - 1,
+                           horizontal=True, key="demo_weather",
+                           format_func=lambda r: f"{WEATHER.get(r, (r, '·'))[1]} {WEATHER.get(r, (r,))[0]}")
+    dc = st.columns(2)
+    demo_pos = dc[0].slider("Where you stand (% of the goal you already have)", 25, 175, 70,
+                            step=5, key="demo_pos")
+    _hmax = max(2, int(st.session_state.horizon))
+    demo_years = dc[1].slider("Years left", 1, _hmax, min(10, _hmax), key="demo_years")
+    _T = cfg.total_steps
+    _ti = int(np.clip(_T - demo_years * cfg.steps_per_year, 0, _T - 1))
+    _wi = int(np.abs(w_grid - demo_pos / 100 * target).argmin())
+    eq_by_reg = {r: float(surf_by_reg[r][_ti, _wi]) for r in _wopts}
+    d_eq = eq_by_reg[demo_regime]
+    d_blind = float(surf_blind[_ti, _wi])
+    d_lo, d_hi = min(eq_by_reg.values()), max(eq_by_reg.values())
+    out = st.columns([1, 1.45])
+    with out[0]:
+        st.markdown(f'<div class="gbwm-sub">THE BRAIN\'S DECISION</div>'
+                    f'<div class="gbwm-odo">{d_eq * 100:.0f}%<span class="cur"> in stocks</span></div>'
+                    f'<div class="gbwm-bar"><div class="seg" style="width:{d_eq * 100:.0f}%;background:{RL}"></div></div>',
+                    unsafe_allow_html=True)
+        chart_keys((RL, "stocks (risky)"), ("#d6d0c2", "cash (safe)"))
+        st.caption(f"A **{risk_word(d_eq)}** mix. <span class='gbwm-rl'>RL</span> decided — nobody "
+                   "hand-coded the number.", unsafe_allow_html=True)
+    with out[1]:
+        _wname = WEATHER.get(demo_regime, (demo_regime,))[0]
+        _behind = demo_pos < 100
+        _bits = [
+            (f"the weather is **{_wname}**, so it shields what you have first"
+             if demo_regime in ("bear", "high_vol") else
+             f"the weather is **{_wname}**, so taking risk is cheaper"),
+            ("you're **behind the goal**, so it has to climb" if _behind
+             else "you're **ahead of the goal**, so there's little to win by gambling"),
+            (f"**{demo_years} yr left** gives time to recover from a dip" if demo_years >= 8
+             else f"**{demo_years} yr left** leaves little room to recover, which argues for care"),
+        ]
+        st.markdown(f"**Why {d_eq * 100:.0f}%?** Because " + "; ".join(_bits) + ".")
+        st.markdown(
+            f"- A **weather-blind** goal-based plan (same money, same time) holds **{d_blind * 100:.0f}%**.\n"
+            f"- Across the four weathers the brain's answer ranges **{d_lo * 100:.0f}–{d_hi * 100:.0f}%** — "
+            f"the weather **alone** moves it by **{(d_hi - d_lo) * 100:.0f} points**.")
+        if st.button("See the full strategy it learned", key="how_to_brain"):
+            goto("brain")
+
+    st.subheader("The big idea, like you're 10")
     st.markdown(
         "Imagine **climbing a mountain**:\n"
         "- 🏔️ The **summit** = your money **goal** (e.g. turn 30,000 into 100,000).\n"
@@ -399,86 +741,102 @@ with t_guide:
         "**cash/bonds** (safe, slow).\n\n"
         "The smart rule: **if the weather is good and you're behind, climb harder (more stocks). "
         "If a storm hits and you're near the top, slow down and protect what you have (more cash/bonds).** "
-        "Nobody writes that rule by hand — the RL brain *learns* it by playing.")
+        "Nobody writes that rule by hand — the RL brain *learns* it by playing. You just felt it in the "
+        "demo above.")
+    with st.expander("Hear one journey, told as a story"):
+        pick5 = st.selectbox("Narrate one journey", ["Regime-Aware G-Learner", "G-Learner"],
+                             format_func=lambda n: FRIENDLY_NAME[n], key="eli5")
+        hist5, _ = single_path(key, pick5, 7)
+        ep = EpisodeContext.from_histories(hist5, target, cfg.steps_per_year)
+        st.success(ADVISOR.explain_episode(ep))
 
-    st.subheader("🧠 Where the reinforcement learning actually happens")
+    st.subheader("Where the reinforcement learning actually happens")
     rlc = st.columns(2)
-    card(rlc[0], "🎯", "The decision the RL brain makes",
+    card(rlc[0], "", "The decision the RL brain makes",
          "Every month it chooses <b>how much to risk</b> (stocks vs. safe) using three things: "
          "<b>time left</b>, the <b>gap to your goal</b>, and the <b>market weather</b>. "
          "This is <i>goal-based</i> RL — it optimizes the <b>chance of hitting your goal</b>, not raw profit.", RL)
-    card(rlc[1], "🔭", "The honesty rule (no peeking)",
+    card(rlc[1], "", "The honesty rule (no peeking)",
          "Even on real history, the brain only ever sees the <b>past</b>. At each month it decides "
          "<b>blind to the future</b> — so when it cuts stocks <i>after</i> a crash begins (not before), "
          "that reaction is real, not hindsight.", GOAL)
 
-    st.subheader("🗺️ What each tab is for — and how to read it")
-    guide_rows = [
-        ("🎯 Your plan", "Your starting point. Type your money, goal and years; it tells you which "
-         "plan gives the best chance and how much stock to start with.",
-         "Read the green **recommendation** and the success %."),
-        ("🏦 Live Bank (NT$)", "The game. Open wallets (start with 30,000 NT$), press play, and watch "
-         "the RL brain invest month by month. You can add/take out money like a real bank.",
-         "Watch the balance grow, then open **How it's investing** to see *why* each month."),
-        ("📊 Compare plans", "A fair race: every plan is tested on the *same* thousands of pretend "
-         "futures.", "Longer green bar = better chance. Always check the **worst dip** column."),
-        ("🔍 Your journey", "Follow ONE pretend future, month by month, for one plan.",
-         "Drag the sliders; the brain explains what it did that month."),
-        ("🕰️ Time machine", "The honest test on REAL history (1999→today) through real crashes.",
-         "Compare the **final balance** AND the **worst crash** each plan lived through."),
-        ("🌍 Multi-asset", "Like the time machine, but splitting across 4 assets at once "
-         "(US stocks, world stocks, bonds, gold).",
-         "Watch the smart plan dump stocks and load bonds/gold during crises."),
-        ("🤖 How the AI learns", "A peek inside the RL brain: the strategy it learned, drawn as a map, "
-         "and a curve of it getting smarter.",
-         "Red = take more risk, green = play safe; see it climb from clueless to expert."),
-        ("🧒 Simple analogy", "The mountain story, with one journey narrated in plain words.",
-         "Just read it — it's the shortest explanation."),
-        ("📋 Proposal coverage", "The technical map: how the school project turned into working code.",
-         "For the curious / graders."),
-    ]
-    for tname, what, how in guide_rows:
-        with st.container():
-            st.markdown(f"**{tname}** — {what}")
-            st.caption(f"👉 How to read it: {how}")
+    st.subheader("Your route through the app")
+    st.caption("Each page is one step of the story; every page ends with a **Next** button. "
+               "Or jump anywhere from here.")
+    ROUTE_DESC = {
+        "how": "This page — the idea and the live demo.",
+        "brain": "The learned strategy drawn as four weather maps, and the learning curve.",
+        "plan": "Your numbers in → the plan with the best chance out.",
+        "bank": "A simulated bank the brain drives month by month, fully transparent.",
+        "journey": "Follow one possible future, step by step, with explanations.",
+        "compare": "Every plan raced on the same thousands of futures.",
+        "history": "The honest test on real history (1999 → today), no peeking.",
+        "multi": "Real history with four assets at once — stocks, bonds, gold.",
+        "coverage": "How the proposal deck became this working code.",
+    }
+    rcols = st.columns(3)
+    for rcol, (ph, ph_pages) in zip(rcols, PHASES):
+        with rcol:
+            st.markdown(f"**{ph}**")
+            for k, lbl in ph_pages:
+                if st.button(lbl, key=f"route_{k}", width="stretch", disabled=(k == "how")):
+                    goto(k)
+                st.caption(ROUTE_DESC[k])
 
-    st.subheader("⚠️ The honest takeaway")
+    st.subheader("The honest takeaway")
     st.info("RL is great at **deciding risk** (when to be brave, when to hide) — and you'll *see* it "
             "reach goals with far smaller crashes than 'all-in stocks'. But it is **not** a crystal ball "
             "that predicts prices. The right way to judge it isn't *'did it make the most money?'* but "
             "*'did it reach the goal with less fear, without cheating (no peeking at the future)?'*")
+    next_step("plan", "Type your own money, goal and years — the app picks the plan with the best chance.",
+              key="next_how")
 
 # --------------------------------------------------------------------------- 1
-with t_plan:
+if page == "plan":
     eyebrow("Goal-based wealth management · reinforcement learning")
     st.markdown('<h1>Reach your goal — <span class="gbwm-serif">safely</span>.</h1>', unsafe_allow_html=True)
-    intro("👋 What you'll see here",
-          "This is the home screen. Enter your money, your goal and your time, and the app tells you "
-          "which plan gives you the **best chance** of reaching the goal — and how much stock to hold "
-          "at the start. <span class='gbwm-rl'>RL</span> picks the winning plan.",
-          ["Change the numbers in the left sidebar (or pick a preset).",
-           "Read the **recommendation** in green: the best plan and your success %.",
-           "To *play* live with simulated money, open the **🏦 Live Bank (NT$)** tab."])
+    intro("What you'll see here",
+          "Enter your money, your goal and your time **in the left sidebar** (or pick a preset), and the "
+          "app races every plan on the same simulated futures to find which gives you the **best chance** "
+          "of reaching the goal. <span class='gbwm-rl'>RL</span> plans are the goal-based ones.",
+          ["The green block below is the verdict: the winning plan and your success %.",
+           "It also shows how many **points of success** the winner adds vs the classic baselines."])
     c = st.columns(4)
     c[0].metric("You have now", money(st.session_state.initial))
     c[1].metric("Goal", money(target))
     c[2].metric("Time", f"{st.session_state.horizon} years")
     c[3].metric("Saving", f"{money(st.session_state.contribution)}/mo")
+    if target <= float(st.session_state.initial):
+        st.warning("Your goal is **at or below** the money you already have, so every plan trivially "
+                   "'succeeds'. Raise the goal (or lower the starting money) in the sidebar to make the "
+                   "comparison meaningful.")
     res = run_comparison(key)
     best = max(res, key=lambda n: res[n]["p_goal"]); bp = res[best]
-    simple = res.get("60/40", bp)
-    st.subheader("✅ Our recommendation")
-    r1, r2, r3 = st.columns([2, 1, 1])
-    r1.success(f"**{FRIENDLY_NAME[best]}** gives you the best shot — about **{pct(bp['p_goal'])}** "
-               f"chance of reaching {money(target)}.\n\n_{STRATEGY_BLURB[best]}_")
-    r2.metric("Chance of success", pct(bp["p_goal"]),
-              delta=f"{(bp['p_goal'] - simple['p_goal']) * 100:+.0f} pts vs 60/40")
-    r3.metric("Suggested start mix", f"{pct(bp['start_stock'])} stocks",
-              delta=f"{pct(1 - bp['start_stock'])} cash", delta_color="off")
-    st.caption(f"If you fall short, the typical gap is about {money(bp['cvar'])}. The plan adjusts every "
-               "month as your balance, time left, and market conditions change.")
-    st.info("👈 Try a **preset** or change your numbers. The *smart adaptive plan* helps most when your "
-            "goal is ambitious for the time you have.")
+    gp = res.get("Glide Path", bp); bh = res.get("Buy & Hold", bp)
+    st.subheader("Our recommendation")
+    _badge = (" <span class='gbwm-rl'>RL</span>"
+              if best in ("Regime-Aware G-Learner", "G-Learner", "Q-Learner") else "")
+    _deltas = (f"{(bp['p_goal'] - gp['p_goal']) * 100:+.0f} pts vs glide path · "
+               f"{(bp['p_goal'] - bh['p_goal']) * 100:+.0f} pts vs all-in stocks · "
+               f"worst dip {pct(bp['drawdown'])} vs {pct(bh['drawdown'])} all-in")
+    st.markdown(
+        f'<div class="gbwm-verdict">'
+        f'<div><div class="cap">Best chance of success</div>'
+        f'<div class="big">{pct(bp["p_goal"])}</div>'
+        f'<div style="font-size:.85rem;color:#534b41;margin-top:6px">of simulated futures reach {money(target)}</div></div>'
+        f'<div class="body"><strong style="font-size:1.08rem">{FRIENDLY_NAME.get(best, best)}</strong>{_badge}<br>'
+        f'<span style="color:#423c33">{STRATEGY_BLURB.get(best, "")}</span><br>'
+        f'<span class="deltas">{_deltas}</span><br>'
+        f'<span style="font-size:.85rem;color:#534b41">Start near <strong>{pct(bp["start_stock"])} stocks</strong>; '
+        f'the plan re-decides every month as your balance, time and the weather change.</span>'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(f"If you fall short, the typical gap is about {money(bp['cvar'])}. Everything recomputes "
+               "from your sidebar numbers — try a preset and watch the verdict change.")
+    next_step("bank", "Watch this brain run a live wallet, month by month — every decision and trade "
+              "explained.", key="next_plan")
 
 # --------------------------------------------------------------------------- 1b
 # 🏦 Live Bank — a simulated bank you play with (no real money).
@@ -533,12 +891,12 @@ def _bank_summary_panel():
     wd = sum(w.total_withdrawn for w in bank.values())
     pnl = total + wd - dep
     sc = st.columns(4)
-    card(sc[0], "🏦", "Total bank balance", ntd(total), RL)
-    card(sc[1], "📥", "Capital you added", ntd(dep), INK)
-    card(sc[2], "📈", "Market profit / loss",
+    card(sc[0], "", "Total bank balance", ntd(total), RL)
+    card(sc[1], "", "Capital you added", ntd(dep), INK)
+    card(sc[2], "", "Market profit / loss",
          f"{ntd(pnl)}  ({pnl / dep * 100:+.1f}%)" if dep else ntd(pnl),
          GOAL if pnl >= 0 else LOSS)
-    card(sc[3], "👛", "Open wallets", str(len(order)), RISK)
+    card(sc[3], "", "Open wallets", str(len(order)), RISK)
 
 
 def _ledger_csv(s) -> bytes:
@@ -578,10 +936,12 @@ def _ranking_export_panel():
     if not order:
         return
     if len(order) >= 2:
-        st.subheader("🏆 Wallet leaderboard")
+        st.subheader("Wallet leaderboard")
         metric = st.selectbox(
-            "Sort by", ["Market profit (%)", "Sharpe (risk-adjusted)", "Current balance (NT$)",
-                        "Progress to goal (%)"], key="rank_metric")
+            "Sort by", ["Worst drop (%)", "Sharpe (risk-adjusted)", "Market profit (%)",
+                        "Current balance (NT$)", "Progress to goal (%)"], key="rank_metric",
+            help="This app judges plans by calm (a small worst-drop) and risk-adjusted return — "
+                 "not by who made the most money — so the ranking defaults to the smallest crash.")
         rows = []
         for wid in order:
             w = bank[wid]
@@ -598,7 +958,8 @@ def _ranking_export_panel():
                 "Month": w.t,
                 "Market": parts[1] if len(parts) > 1 else w.mode_label,
             })
-        df = pd.DataFrame(rows).sort_values(metric, ascending=False).reset_index(drop=True)
+        ascending = metric == "Worst drop (%)"  # smaller crash is better; every other metric: bigger is better
+        df = pd.DataFrame(rows).sort_values(metric, ascending=ascending).reset_index(drop=True)
         medals = ["🥇", "🥈", "🥉"]
         df.insert(0, "#", [medals[i] if i < 3 else str(i + 1) for i in range(len(df))])
         df["Current balance (NT$)"] = df["Current balance (NT$)"].map(lambda x: f"NT$ {x:,.0f}")
@@ -607,22 +968,44 @@ def _ranking_export_panel():
         df["Sharpe (risk-adjusted)"] = df["Sharpe (risk-adjusted)"].map(lambda x: f"{x:.2f}")
         df["Volatility (%)"] = df["Volatility (%)"].map(lambda x: f"{x:.0f}%")
         df["Worst drop (%)"] = df["Worst drop (%)"].map(lambda x: f"{x:.0f}%")
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        # Phone-friendly: pin the priority columns first (rank · wallet · headline · worst-drop),
+        # push the three secondary columns (volatility · month · market) to the end, and give every
+        # column an explicit narrow width + a help tooltip so ~10 columns don't overflow on a phone.
+        # All columns stay present: the user-chosen `metric` may be any of them (it must stay visible),
+        # and the CSV export downstream reads from the wallet objects, not this DataFrame.
+        st.dataframe(
+            df, hide_index=True, width="stretch",
+            column_order=["#", "Wallet", "Current balance (NT$)", "Worst drop (%)",
+                          "Sharpe (risk-adjusted)", "Market profit (%)", "Progress to goal (%)",
+                          "Volatility (%)", "Month", "Market"],
+            column_config={
+                "#": st.column_config.TextColumn("Rank", width="small", help="Rank by the metric chosen above."),
+                "Wallet": st.column_config.TextColumn("Wallet", width="medium"),
+                "Current balance (NT$)": st.column_config.TextColumn("Balance", width="small", help="Current wallet balance (NT$)."),
+                "Worst drop (%)": st.column_config.TextColumn("Worst drop", width="small", help="Scariest peak-to-valley fall along the way (lower is better)."),
+                "Sharpe (risk-adjusted)": st.column_config.TextColumn("Sharpe", width="small", help="Profit per unit of stress (higher is better)."),
+                "Market profit (%)": st.column_config.TextColumn("Profit", width="small", help="Net market profit vs. the capital you added."),
+                "Progress to goal (%)": st.column_config.TextColumn("To goal", width="small", help="How far the balance is toward the goal."),
+                "Volatility (%)": st.column_config.TextColumn("Vol", width="small", help="Bumpiness of the ride (annualized)."),
+                "Month": st.column_config.NumberColumn("Month", width="small", help="Months played so far."),
+                "Market": st.column_config.TextColumn("Market", width="small"),
+            },
+        )
         st.caption("**Sharpe** = profit per unit of stress (higher is better). **Worst drop** = the "
                    "scariest peak-to-valley fall along the way (lower is better).")
-    st.download_button("📥 Export the WHOLE bank (CSV)", data=_bank_csv(),
+    st.download_button("Export the whole bank (CSV)", data=_bank_csv(),
                        file_name="bank_statements.csv", mime="text/csv", key="dl_bank")
 
 
 def _decision_log_expander(s):
     """The transparency centerpiece: every month's decision + trades + 'why'."""
-    with st.expander("🔍 How it's investing — month-by-month decision & trade log", expanded=False):
+    with st.expander("How it's investing — month-by-month decision & trade log", expanded=True):
         st.caption("**The prices are real history, but the model only ever sees the past.** Each month "
                    "it decides *blind to the future*, then we apply what actually happened. That's why "
                    "it reacts *after* a crash starts — never before. Below: what it saw, what it moved, "
                    "and **why**.")
         if not s.decisions:
-            st.info("Press **▶️ Advance** to make the model take its first decision.")
+            st.info("Press **Advance 1 month** to make the model take its first decision.")
             return
         rows = []
         for d in reversed(s.decisions):  # newest first
@@ -636,8 +1019,21 @@ def _decision_log_expander(s):
                 "Why the model did it": d.rationale,
                 "Event": _flag_text(d.flags),
             })
-        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True,
-                     height=min(420, 60 + 36 * len(rows)))
+        # Phone-friendly widths: keep the two free-text columns (the trades + the 'why') wide and
+        # readable, and constrain the short status columns so the 7-column log doesn't overflow.
+        st.dataframe(
+            pd.DataFrame(rows), hide_index=True, width="stretch",
+            height=min(420, 60 + 36 * len(rows)),
+            column_config={
+                "When": st.column_config.TextColumn("When", width="small"),
+                "Weather": st.column_config.TextColumn("Weather", width="small", help="Market mood the model detected that month."),
+                "In risky assets": st.column_config.TextColumn("In risky", width="small", help="Share of your money in risky assets that month."),
+                "Money moved this month": st.column_config.TextColumn("Money moved", width="medium", help="The biggest buys/sells the model made this month."),
+                "Month P&L": st.column_config.TextColumn("Month P&L", width="small"),
+                "Why the model did it": st.column_config.TextColumn("Why", width="large"),
+                "Event": st.column_config.TextColumn("Event", width="small"),
+            },
+        )
 
 
 def _live_panel(wid: str):
@@ -648,6 +1044,9 @@ def _live_panel(wid: str):
     if s is None:
         return
     cur = s.currency
+    _flash = st.session_state.pop(f"flash_{wid}", None)  # one-shot message that survived a rerun
+    if _flash:
+        st.toast(_flash)
     playing = st.session_state.get(f"play_{wid}", False)
     speed_label = st.session_state.get(f"speedlbl_{wid}", "Normal")
     # Auto-advance per fragment tick while "playing" (Turbo jumps several months).
@@ -661,9 +1060,9 @@ def _live_panel(wid: str):
 
     # provenance + honesty note
     if s.source == "synthetic" and "Simulated" not in s.mode_label:
-        st.warning(f"⚠️ Offline: using **synthetic stand-in data**. {s.mode_label}")
+        st.warning(f"Offline: using **synthetic stand-in data**. {s.mode_label}")
     else:
-        st.caption(f"📡 {s.mode_label} · data source: **{s.source}** · "
+        st.caption(f"{s.mode_label} · data source: **{s.source}** · "
                    f"the model only ever sees the past (no look-ahead).")
 
     # headline metrics
@@ -686,7 +1085,7 @@ def _live_panel(wid: str):
     # the RL decision, in plain words (this is the transparency the user asked for)
     eq = s.equity_now()
     wname = WEATHER.get(s.current_regime(), (s.current_regime(),))[0]
-    msg = (f"🧠 <span class='gbwm-rl'>RL decision</span> &nbsp; The weather looks **{wname}**, so it "
+    msg = (f"<span class='gbwm-rl'>RL decision</span> &nbsp; The weather looks **{wname}**, so it "
            f"invests **{eq * 100:.0f}%** of your money in risky assets (a *{risk_word(eq)}* mix) and "
            f"keeps the rest in cash.")
     if s.A > 1:
@@ -696,67 +1095,100 @@ def _live_panel(wid: str):
                 unsafe_allow_html=True)
     if s.decisions:
         last = s.decisions[-1]
-        st.caption(f"📋 Last month ({last.label.replace('Month ', 'M')}): **{_trades_text(last, s.asset_labels)}**. "
+        st.caption(f"Last month ({last.label.replace('Month ', 'M')}): **{_trades_text(last, s.asset_labels)}**. "
                    f"_{last.rationale}_")
-        if stepped:  # surface milestone events as toasts for every month just played
+        if stepped:  # ONE coalesced toast per tick (Turbo plays 3 months/tick — avoid a toast strobe)
+            new_flags = []
             for d in s.decisions[n_before:]:
                 for fl in d.flags:
-                    st.toast(_FLAG_TOAST.get(fl, fl))
+                    if fl not in new_flags:
+                        new_flags.append(fl)
+            if new_flags:
+                priority = ["goal", "storm", "big_drop", "clearing"]
+                new_flags.sort(key=lambda f: priority.index(f) if f in priority else 99)
+                extra = len(new_flags) - 1
+                st.toast(_FLAG_TOAST.get(new_flags[0], new_flags[0])
+                         + (f"  (+{extra} more this step)" if extra > 0 else ""))
 
     # While auto-playing, manual controls are disabled (only the timer advances time).
     if playing:
-        st.caption("⏸️ Pause **▶️ Auto-play** (above) to use the controls.")
+        st.caption("Pause **Auto-play** (above) to use the controls.")
 
-    st.markdown("**⏱️ Time controls**")
+    st.markdown("**Time controls**")
     tc = st.columns(4)
     # st.rerun() after a manual move so the bank summary & leaderboard fragments refresh too.
-    if tc[0].button("▶️ Advance 1 month", key=f"adv1_{wid}", disabled=s.done or playing,
-                    use_container_width=True):
+    if tc[0].button("Advance 1 month", key=f"adv1_{wid}", disabled=s.done or playing,
+                    width="stretch"):
         s.advance(1); st.rerun()
-    if tc[1].button("⏩ Advance 1 year", key=f"adv12_{wid}", disabled=s.done or playing,
-                    use_container_width=True):
+    if tc[1].button("Advance 1 year", key=f"adv12_{wid}", disabled=s.done or playing,
+                    width="stretch"):
         s.advance(12); st.rerun()
-    if tc[2].button("⏭️ To the end", key=f"advall_{wid}", disabled=s.done or playing,
-                    use_container_width=True):
+    if tc[2].button("Jump to the end", key=f"advall_{wid}", disabled=s.done or playing,
+                    width="stretch"):
         s.advance(s.T); st.rerun()
-    if tc[3].button("🔄 Restart", key=f"reset_{wid}", disabled=playing, use_container_width=True):
-        bank[wid] = _build_wallet(st.session_state.bank_params[wid])
-        st.rerun()
+    if tc[3].button("Restart wallet", key=f"reset_{wid}", disabled=playing, width="stretch"):
+        st.session_state[f"confirm_reset_{wid}"] = True
+    if st.session_state.get(f"confirm_reset_{wid}"):
+        st.warning(f"Restart **{s.name}**? This erases its {s.t} played months and every deposit "
+                   "(the wallet starts over from its opening settings).")
+        rc = st.columns([1, 1, 2])
+        if rc[0].button("Yes, restart it", key=f"reset_yes_{wid}", type="primary"):
+            bank[wid] = _build_wallet(st.session_state.bank_params[wid])
+            st.session_state.pop(f"confirm_reset_{wid}", None)
+            st.rerun()
+        if rc[1].button("Keep playing", key=f"reset_no_{wid}"):
+            st.session_state.pop(f"confirm_reset_{wid}", None)
+            st.rerun()
     if s.done:
-        st.success("🏁 You reached the end of the available history. Press **Restart**, open another "
-                   "wallet, or create one with **Simulated future** to keep playing forever.")
+        st.success("You reached the end of the available history. Press **Restart wallet**, open "
+                   "another wallet, or create one with **Simulated future** to keep playing forever.")
 
-    st.markdown("**🏦 Bank controls** — add or take out capital whenever you like")
+    st.markdown("**Bank controls** — add or take out capital whenever you like")
     bc = st.columns([1.4, 1, 1])
     amt = bc[0].number_input(f"Amount ({cur})", min_value=0, max_value=100_000_000,
                              value=5_000, step=1_000, key=f"amt_{wid}", disabled=playing)
-    if bc[1].button("💰 Deposit", key=f"dep_{wid}", type="primary", disabled=playing,
-                    use_container_width=True):
-        s.deposit(float(amt)); st.rerun()
-    if bc[2].button("🏧 Withdraw", key=f"wd_{wid}", disabled=playing or s.wealth <= 0,
-                    use_container_width=True):
-        s.withdraw(float(amt)); st.rerun()
+    if bc[1].button("Deposit", key=f"dep_{wid}", type="primary", disabled=playing,
+                    width="stretch"):
+        s.deposit(float(amt))
+        st.session_state[f"flash_{wid}"] = f"Deposited {cur} {float(amt):,.0f}."
+        st.rerun()
+    if bc[2].button("Withdraw", key=f"wd_{wid}", disabled=playing or s.wealth <= 0,
+                    width="stretch"):
+        _before = s.wealth
+        s.withdraw(float(amt))
+        if (_before - s.wealth) + 1e-6 < float(amt):  # withdraw silently clamps to the balance
+            st.session_state[f"flash_{wid}"] = (
+                f"Only {cur} {_before - s.wealth:,.0f} was available, so that's what we took out.")
+        st.rerun()
 
-    # figures (close them after rendering — this panel re-runs on every autoplay tick)
+    # figures (closed after rendering — this panel re-runs on every autoplay tick);
+    # each chart's reading key + takeaway sit in ITS OWN column, right under it.
     g = st.columns([1.45, 1])
-    fig_b = plot_balance(s); g[0].pyplot(fig_b); plots.plt.close(fig_b)
-    fig_a = plot_allocation_bar(s); g[1].pyplot(fig_a); plots.plt.close(fig_a)
-    st.caption("The dotted grey line is **buy & hold the market**. When the AI line stays above it "
-               "*during crashes*, that's the RL brain protecting you.")
+    with g[0]:
+        show_fig(plot_balance(s))
+        chart_keys((INK, "the AI plan"), ("#9aa0a6", "just buying the market", "dash"),
+                   (LOSS, "your goal", "dash"), (GOAL, "months at/above the goal"))
+        st.caption("Takeaway: when the dark line holds up while the dotted one dives, the AI shielded "
+                   "you through that crash. Triangles mark your deposits (up) and withdrawals (down).")
+    with g[1]:
+        show_fig(plot_allocation_bar(s))
+        st.caption("Takeaway: where the money sits **right now**. A long stocks bar = being brave this "
+                   "month; a long cash or bonds bar = playing it safe.")
 
     # --- transparency: the decision & trade log (collapsed by default) ------- #
     _decision_log_expander(s)
 
-    with st.expander("💼 Money in each asset, over time", expanded=False):
+    with st.expander("Money in each asset, over time", expanded=False):
         fig_m = plot_asset_money(s)
         if fig_m is None:
             st.info("Advance a few months to see how your money gets split.")
         else:
-            st.pyplot(fig_m); plots.plt.close(fig_m)
-            st.caption("Each colored band is real money (NT$) parked in that asset. Watch it slosh from "
-                       "stocks into bonds/gold (and cash) when the weather turns.")
+            show_fig(fig_m)
+            st.caption("Takeaway: each colored band is the money (NT$) sitting in one asset, stacked into "
+                       "your total. When the weather turns bad, the AI drains the stock bands into bonds, "
+                       "gold and cash to shield you — then refills them once things calm down.")
 
-    with st.expander("📊 Risk & return scorecard", expanded=False):
+    with st.expander("Risk & return scorecard", expanded=False):
         mt = s.metrics()
         k = st.columns(4)
         k[0].metric("Yearly return", f"{mt['ann_return'] * 100:+.1f}%")
@@ -766,30 +1198,38 @@ def _live_panel(wid: str):
         st.caption("These ignore your deposits/withdrawals — they measure how the *investing* itself did. "
                    "A higher Sharpe and a smaller worst-drop mean a calmer ride to the goal.")
 
-    with st.expander("🧾 Statement (every cash movement)", expanded=False):
+    with st.expander("Statement (every cash movement)", expanded=False):
         rows = [{"When": tx.label, "Type": tx.kind,
                  "Amount": f"{cur} {tx.amount:,.0f}",
                  "Balance after": f"{cur} {tx.balance_after:,.0f}"}
                 for tx in reversed(s.transactions)]
-        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
-        st.download_button("📥 Download statement (CSV)", data=_ledger_csv(s),
+        st.dataframe(
+            pd.DataFrame(rows), hide_index=True, width="stretch",
+            column_config={
+                "When": st.column_config.TextColumn("When", width="medium"),
+                "Type": st.column_config.TextColumn("Type", width="small"),
+                "Amount": st.column_config.TextColumn("Amount", width="small"),
+                "Balance after": st.column_config.TextColumn("Balance after", width="small"),
+            },
+        )
+        st.download_button("Download statement (CSV)", data=_ledger_csv(s),
                            file_name=f"statement_{s.name}.csv", mime="text/csv",
-                           key=f"dl_{wid}", use_container_width=True)
+                           key=f"dl_{wid}", width="stretch")
 
 
-with t_bank:
+if page == "bank":
     eyebrow("Live sandbox · simulated bank · public data · fake money")
     st.markdown('<h1>Your <span class="gbwm-serif">simulated bank</span>: '
                 'play with the real market.</h1>', unsafe_allow_html=True)
-    intro("🏦 What you'll see here",
+    intro("What you'll see here",
           "A make-believe bank to experiment with. Open one or more **wallets** (you start with "
           "30,000 NT$), pick a real world market, and the **goal-based reinforcement-learning brain** "
           "<span class='gbwm-rl'>RL</span> decides on its own how much to invest and where, month by "
           "month. You can **deposit or withdraw** capital anytime — but here **nothing is real money**.",
-          ["Open a wallet, press **▶️ Advance** (or **Auto-play**) and watch the balance grow (or fall).",
-           "Open **🔍 How it's investing** to see *exactly* what it bought/sold each month and **why**.",
+          ["Open a wallet, press **Advance 1 month** (or **Auto-play**) and watch the balance move.",
+           "The **How it's investing** log (open by default) shows *exactly* what it bought/sold and **why**.",
            "Public market history, or a **simulated future** generated by the model itself."])
-    st.warning("🎮 **Educational game.** No real money is used or moved. It's public market data and "
+    st.warning("**Educational game.** No real money is used or moved. It's public market data and "
                "fake balances in **NT$** (New Taiwan Dollars). Not financial advice.")
 
     st.session_state.setdefault("bank", {})
@@ -802,32 +1242,45 @@ with t_bank:
     # --- bank-wide summary (its own fragment so it stays live during auto-play) #
     if order:
         _render_fragment(_bank_summary_panel, run_every=_bank_run_every())
+        if max(w.t for w in bank.values()) >= 12:
+            st.caption("Heads-up: the bank lives only in this browser tab — a refresh erases it. "
+                       "**Save / load your bank** (below) downloads a file you can restore any time.")
         st.divider()
 
-    # --- create a new wallet ------------------------------------------------ #
-    with st.expander("➕ Open a new wallet", expanded=not order):
+    # --- create a new wallet (staged: 3 visible decisions; the rest are good
+    #     defaults behind a "customize" toggle, so the first play is one click) - #
+    with st.expander("Open a new wallet", expanded=not order):
+        customize = st.toggle("Customize the defaults (money, goal, years, costs)",
+                              value=False, key="wallet_customize")
         with st.form("new_wallet", clear_on_submit=False):
-            f1 = st.columns([1.3, 1])
+            f1 = st.columns([1.2, 1.2, 1])
             wname = f1[0].text_input("Wallet name", value=f"Wallet {st.session_state.bank_n + 1}")
-            mode_label = f1[1].radio("Which data?", list(DATA_MODES), horizontal=False)
-            mlabel = st.selectbox("Market", list(SANDBOX_MARKET_BY_LABEL),
-                                  help="Real history of a public world market, or the multi-asset "
-                                       "portfolio (S&P + international + bonds + gold).")
-            f2 = st.columns(4)
-            # NB: distinct names — `target`/`initial` are module globals used by the planner tabs.
-            winitial = f2[0].number_input("Starting capital (NT$)", 1_000, 100_000_000, 30_000, step=5_000)
-            wtarget = f2[1].number_input("Goal (NT$)", 5_000, 1_000_000_000, 100_000, step=10_000)
-            recurring = f2[2].number_input("Monthly top-up (NT$)", 0, 10_000_000, 0, step=500,
-                                           help="Added automatically each month you advance.")
-            whorizon = f2[3].slider("Years to play", 3, 30, 15)
-            f3 = st.columns([1, 1, 1])
-            start_year = f3[0].slider("Start year (real history only)", 2000, 2019, 2008)
-            cost_label = f3[1].selectbox("Trading costs", list(COSTS), index=0,
-                                         help="Fees + slippage charged on every rebalance — shows how "
-                                              "turnover eats returns in the real world.")
-            offline = f3[2].checkbox("Offline", value=False,
-                                     help="No internet? Uses synthetic stand-in data.")
-            submitted = st.form_submit_button("🟢 Open wallet", type="primary")
+            mlabel = f1[1].selectbox("Market", list(SANDBOX_MARKET_BY_LABEL),
+                                     help="Real history of a public world market, or the multi-asset "
+                                          "portfolio (S&P + international + bonds + gold).")
+            mode_label = f1[2].radio("Which data?", list(DATA_MODES), horizontal=False)
+            # NB: distinct names — `target`/`initial` are module globals used by the planner pages.
+            winitial, wtarget, recurring, whorizon = 30_000, 100_000, 0, 15
+            start_year, cost_label, offline = 2008, list(COSTS)[0], False
+            if customize:
+                f2 = st.columns(4)
+                winitial = f2[0].number_input("Starting capital (NT$)", 1_000, 100_000_000, 30_000, step=5_000)
+                wtarget = f2[1].number_input("Goal (NT$)", 5_000, 1_000_000_000, 100_000, step=10_000)
+                recurring = f2[2].number_input("Monthly top-up (NT$)", 0, 10_000_000, 0, step=500,
+                                               help="Added automatically each month you advance.")
+                whorizon = f2[3].slider("Years to play", 3, 30, 15)
+                f3 = st.columns([1, 1, 1])
+                start_year = f3[0].slider("Start year (real history only)", 2000, 2019, 2008)
+                cost_label = f3[1].selectbox("Trading costs", list(COSTS), index=0,
+                                             help="Fees + slippage charged on every rebalance — shows how "
+                                                  "turnover eats returns in the real world.")
+                offline = f3[2].checkbox("Offline", value=False,
+                                         help="No internet? Uses synthetic stand-in data.")
+            else:
+                st.caption("Defaults: start **NT$ 30,000** toward a **NT$ 100,000** goal in **15 years**, "
+                           "from **2008** (you'll live through the crash), no trading costs. "
+                           "Flip the toggle above to change them.")
+            submitted = st.form_submit_button("Open wallet", type="primary")
         if submitted:
             params = dict(
                 name=wname or f"Wallet {st.session_state.bank_n + 1}",
@@ -841,27 +1294,31 @@ with t_bank:
                 with st.spinner("Preparing the market and solving the model…"):
                     session = _build_wallet(params)
             except Exception as e:  # noqa: BLE001
-                st.error(f"Could not open the wallet: {e}")
+                st.error("We couldn't open that wallet — usually the market data couldn't be reached. "
+                         "Try **Offline** mode, a different market, or another start year.")
+                with st.expander("Technical details"):
+                    st.code(str(e))
             else:
                 wid = uuid.uuid4().hex[:8]
                 bank[wid] = session
                 st.session_state.bank_params[wid] = params
                 order.append(wid)
                 st.session_state.bank_n += 1
-                st.success(f"✅ Opened **{session.name}**. Let's play!")
+                st.success(f"Opened **{session.name}** — press **Advance 1 month** below to make "
+                           "its first move.")
                 st.rerun()
 
     # --- save / load the whole bank ----------------------------------------- #
-    with st.expander("💾 Save / load your bank", expanded=False):
+    with st.expander("Save / load your bank", expanded=False):
         sl = st.columns(2)
         if order:
-            sl[0].download_button("💾 Save bank (JSON)", data=_bank_state_json(),
+            sl[0].download_button("Save bank (JSON)", data=_bank_state_json(),
                                   file_name="bank_save.json", mime="application/json",
-                                  use_container_width=True)
+                                  width="stretch")
         else:
             sl[0].caption("Open a wallet first to save.")
-        up = sl[1].file_uploader("📂 Load a saved bank (JSON)", type=["json"], key="bank_upload")
-        if up is not None and sl[1].button("Load this save", use_container_width=True):
+        up = sl[1].file_uploader("Load a saved bank (JSON)", type=["json"], key="bank_upload")
+        if up is not None and sl[1].button("Load this save", width="stretch"):
             try:
                 up.seek(0)  # allow re-reading the same uploaded file on repeat clicks
                 data = json.loads(up.read())
@@ -872,17 +1329,27 @@ with t_bank:
                         new_params[wid] = rec["params"]
                         new_order.append(wid)
             except Exception as e:  # noqa: BLE001
-                st.error(f"Could not load that file: {e}")
+                st.error("We couldn't read that save file. Make sure it's a bank file you saved here "
+                         "(a .json from **Save bank**) and wasn't edited by hand.")
+                with st.expander("Technical details"):
+                    st.code(str(e))
             else:
+                # drop stale per-wallet widget state so loaded wallets start clean (paused, no phantom toggle)
+                for _k in list(st.session_state.keys()):
+                    if any(_k.startswith(p) for p in
+                           ("play_", "speedlbl_", "amt_", "confirm_close_", "confirm_reset_", "flash_")):
+                        st.session_state.pop(_k, None)
+                st.session_state.pop("bank_active", None)
+                st.session_state.pop("rank_metric", None)
                 st.session_state.bank = new_bank
                 st.session_state.bank_params = new_params
                 st.session_state.bank_order = new_order
                 st.session_state.bank_n = len(new_order)
-                st.success(f"✅ Loaded {len(new_order)} wallet(s).")
+                st.success(f"Loaded {len(new_order)} wallet(s).")
                 st.rerun()
 
     if not order:
-        st.info("👆 Open your first wallet to start. Tip: try the **S&P 500** from **2008** to live "
+        st.info("Open your first wallet above to start. Tip: try the **S&P 500** from **2008** to live "
                 "through the crash, or the **multi-asset portfolio**.")
     else:
         # --- pick the active wallet + play controls (outside the fragment) -- #
@@ -895,16 +1362,26 @@ with t_bank:
             if s.done:  # don't leave the toggle stuck visually ON when there's nothing to play
                 st.session_state.pop(f"play_{active}", None)
             pc = st.columns([1, 1, 1])
-            playing = pc[0].toggle("▶️ Auto-play", key=f"play_{active}", value=False,
+            playing = pc[0].toggle("Auto-play", key=f"play_{active}", value=False,
                                    disabled=s.done,
                                    help="Advance months automatically. Pause to deposit/withdraw.")
             pc[1].selectbox("Speed", list(_SPEEDS), index=1, key=f"speedlbl_{active}")
             speed = _SPEEDS[st.session_state.get(f"speedlbl_{active}", "Normal")]
-            if pc[2].button("🗑️ Close wallet", key=f"close_{active}"):
-                bank.pop(active, None)
-                st.session_state.bank_params.pop(active, None)
-                order.remove(active)
-                st.rerun()
+            if pc[2].button("Close wallet", key=f"close_{active}", disabled=playing):
+                st.session_state[f"confirm_close_{active}"] = True
+            if st.session_state.get(f"confirm_close_{active}"):
+                st.warning(f"Close **{bank[active].name}**? This erases its months, deposits and "
+                           "leaderboard entry, and can't be undone.")
+                cca, ccb, _sp = st.columns([1, 1, 2])
+                if cca.button("Yes, close it", key=f"close_yes_{active}", type="primary"):
+                    bank.pop(active, None)
+                    st.session_state.bank_params.pop(active, None)
+                    order.remove(active)
+                    st.session_state.pop(f"confirm_close_{active}", None)
+                    st.rerun()
+                if ccb.button("Keep it", key=f"close_no_{active}"):
+                    st.session_state.pop(f"confirm_close_{active}", None)
+                    st.rerun()
             else:
                 run_every = speed if (playing and not s.done) else None
                 _render_fragment(_live_panel, active, run_every=run_every)
@@ -913,7 +1390,7 @@ with t_bank:
                 _render_fragment(_ranking_export_panel, run_every=_bank_run_every())
 
     # --- the honest answer: does RL work in real markets? ------------------- #
-    with st.expander("❓ Does this really work in real markets? (honest answer)", expanded=False):
+    with st.expander("Does this really work in real markets? (honest answer)", expanded=False):
         st.markdown(
             "**Short version:** reinforcement learning (RL) is great at *deciding risk* (how much to "
             "risk and when to protect), but it is **not a crystal ball** that predicts prices, nor a "
@@ -934,27 +1411,55 @@ with t_bank:
             "allocation** (exactly what this app does) than for *predicting and beating the market*. "
             "The right way to judge it isn't *'did it make more?'* but *'did it reach the goal with "
             "less risk and without cheating (no peeking at the future)?'* — which is what the "
-            "**🕰️ Time machine** tab measures.")
+            "**Proof › Time machine** page measures.")
+    next_step("journey", "Slow it down: follow one single future month by month, with the brain "
+              "explaining each move.", key="next_bank")
 
 # --------------------------------------------------------------------------- 2
-with t_cmp:
-    st.header("Compare the plans")
-    intro("⚖️ What you'll see here",
+if page == "compare":
+    eyebrow("Same futures · every plan · fair race")
+    st.markdown('<h1>Compare the plans — <span class="gbwm-serif">fairly</span>.</h1>',
+                unsafe_allow_html=True)
+    intro("What you'll see here",
           "A fair fight: every plan is tested on the **same** thousands of simulated futures. You'll "
           "see which gives the best chance of reaching the goal and how scary the ride would be "
           "(the worst dip). <span class='gbwm-rl'>RL</span> plans are the goal-based / regime-aware ones.",
           ["The longest green bar = the plan with the best chance of success.",
            "Check the **worst dip** column: a high ending with huge crashes is not a good plan."])
-    st.caption("Every plan is tested on the *same* thousands of simulated futures — a fair fight.")
     res = run_comparison(key)
-    st.pyplot(goal_chance_chart({n: res[n]["p_goal"] for n in res}))
-    rows = [{"Plan": FRIENDLY_NAME[n], "Chance of reaching goal": pct(res[n]["p_goal"]),
+    show_fig(goal_chance_chart({n: res[n]["p_goal"] for n in res}))
+    chart_keys((GOAL, "the winning plan"), (RISK, "target-date glide path — the deck's baseline"),
+               (_NEUTRAL, "the other plans"))
+    st.caption("Takeaway: each bar is one plan's chance of reaching **your** goal on the same simulated "
+               "futures. A high chance is only half the story — check the worst-dip column below before "
+               "you pick.")
+    _ra, _gp, _bh = (res.get("Regime-Aware G-Learner"), res.get("Glide Path"), res.get("Buy & Hold"))
+    if _ra and _gp and _bh:
+        st.success(f"**The deck's headline, measured live on your numbers:** the regime-aware agent "
+                   f"reaches the goal in **{pct(_ra['p_goal'])}** of futures — "
+                   f"**{(_ra['p_goal'] - _gp['p_goal']) * 100:+.0f} pts vs the glide path** and "
+                   f"**{(_ra['p_goal'] - _bh['p_goal']) * 100:+.0f} pts vs buy & hold** — while riding a "
+                   f"**{pct(_ra['drawdown'])}** worst dip vs **{pct(_bh['drawdown'])}** for all-in stocks. "
+                   f"(The [pitch deck](https://orosergio.github.io/RegimeAwareGBWM/) sketched ~+13 / +21 pts "
+                   f"as illustrative targets; here you watch the real number come out of the simulation.)")
+    rows = [{"Plan": FRIENDLY_NAME.get(n, n), "Chance of reaching goal": pct(res[n]["p_goal"]),
              "Typical ending balance": money(res[n]["median"]),
              "If short, typical gap": money(res[n]["cvar"]),
              "Worst dip along the way": pct(res[n]["drawdown"])}
             for n in sorted(res, key=lambda x: res[x]["p_goal"], reverse=True)]
-    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
-    with st.expander("📐 Full evaluation — the proposal's six metrics"):
+    st.dataframe(
+        pd.DataFrame(rows), hide_index=True, width="stretch",
+        column_order=["Plan", "Chance of reaching goal", "Worst dip along the way",
+                      "Typical ending balance", "If short, typical gap"],
+        column_config={
+            "Plan": st.column_config.TextColumn("Plan", width="medium"),
+            "Chance of reaching goal": st.column_config.TextColumn("Chance", width="small", help="Probability of reaching your goal across the simulated futures (higher is better)."),
+            "Worst dip along the way": st.column_config.TextColumn("Worst dip", width="small", help="Average worst peak-to-valley fall along the way (lower is better)."),
+            "Typical ending balance": st.column_config.TextColumn("Typical ending", width="small", help="Median final balance."),
+            "If short, typical gap": st.column_config.TextColumn("If short, gap", width="small", help="Typical shortfall (CVaR) when the goal is missed."),
+        },
+    )
+    with st.expander("Full evaluation — the proposal's six metrics"):
         full = [{"Plan": FRIENDLY_NAME[n],
                  "Goal attainment": pct(res[n]["p_goal"]),
                  "Shortfall if missed": money(res[n]["cvar"]),
@@ -963,17 +1468,21 @@ with t_cmp:
                  "Turnover": f"{res[n]['turnover']:.3f}",
                  "Best in regime": REGIME_LABEL.get(res[n]["best_regime"], res[n]["best_regime"])}
                 for n in sorted(res, key=lambda x: res[x]["p_goal"], reverse=True)]
-        st.dataframe(pd.DataFrame(full), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(full), hide_index=True, width="stretch")
         st.caption("Matches proposal slide 11: goal attainment · shortfall · terminal wealth · drawdown · "
-                   "turnover · regime behavior (visualized as the policy heatmap in *How the AI learns*).")
+                   "turnover · regime behavior (drawn as the four weather maps in *Inside the AI*).")
     with st.expander("What do these plans actually do?"):
         for n in ["Buy & Hold", "60/40", "Glide Path", "G-Learner", "Regime-Aware G-Learner"]:
             st.markdown(f"**{FRIENDLY_NAME[n]}** — {STRATEGY_BLURB[n]}")
+    next_step("history", "Simulations are fair; history is honest. Run every plan over the real past — "
+              "dot-com, 2008 and COVID — with no peeking.", key="next_compare")
 
 # --------------------------------------------------------------------------- 3
-with t_journey:
-    st.header("Walk through one possible journey")
-    intro("🔍 What you'll see here",
+if page == "journey":
+    eyebrow("One simulated future · month by month · the brain explains itself")
+    st.markdown('<h1>Walk through <span class="gbwm-serif">one journey</span>.</h1>',
+                unsafe_allow_html=True)
+    intro("What you'll see here",
           "We follow **one** possible future, month by month, for a plan you choose. You'll see your "
           "balance rise and fall, how much the model puts in stocks at each moment, and what it "
           "thought the market was doing.",
@@ -987,26 +1496,38 @@ with t_journey:
     reached = terminal >= target
     m1, m2 = st.columns(2)
     m1.metric("Ending balance on this path", money(terminal),
-              delta="reached goal 🎉" if reached else "short of goal")
+              delta="reached the goal" if reached else "-short of the goal")
     m2.metric("Your goal", money(target))
     wfig = plots.plt.figure(figsize=(8, 3.3)); wax = wfig.add_subplot(111)
     wax.plot(hist["wealth"][0], color=INK, lw=1.9)
     wax.axhline(target, color=LOSS, lw=1.6, label="goal")
     wax.fill_between(range(hist["wealth"].shape[1]), hist["wealth"][0], target,
                      where=hist["wealth"][0] >= target, color=GOAL, alpha=0.15)
-    wax.set(title="Your balance over time", xlabel="month", ylabel="balance ($)"); wax.legend()
-    st.pyplot(wfig)
-    st.pyplot(plots.plot_allocation_over_time(hist["weights"][0], ["stocks"]))
-    st.caption("Risk level: under 33% stocks = **conservative**, 33–66% = **balanced**, over 66% = **aggressive**.")
+    wax.set(title="Your balance over time", xlabel="month", ylabel="balance ($)")
+    _finish_fig(wfig, wax)
+    show_fig(wfig)
+    chart_keys((INK, "your balance"), (LOSS, "your goal", "dash"),
+               (GOAL, "stretches at/above the goal"))
+    st.caption("Takeaway: one pretend future for the plan you picked. If the line ends above the red "
+               "goal line, this journey made it. Drag the future slider to see how differently it can go.")
+    show_fig(plots.plot_allocation_over_time(hist["weights"][0], ["stocks"]))
+    st.caption("Takeaway: how much was in stocks each month of the journey above — high = chasing "
+               "growth, low = protecting you. As a guide: under 33% is conservative, 33–66% balanced, "
+               "over 66% aggressive.")
     step = st.slider("Peek at a month", 1, cfg.total_steps - 1, cfg.total_steps // 2)
     sc = StepContext(weights=hist["weights"][0, step], prev_weights=hist["weights"][0, step - 1],
                      belief=hist["belief"][0, step], prev_belief=hist["belief"][0, step - 1],
                      wealth=float(hist["wealth"][0, step]), target=target, step=step,
                      n_steps=cfg.total_steps, steps_per_year=cfg.steps_per_year,
                      regime_names=cfg.market.regime_names, asset_names=hist["asset_names"])
-    st.info("🗣️ " + ADVISOR.explain_step(sc))
+    st.info(ADVISOR.explain_step(sc))
     with st.expander("What did the model think the market was doing?"):
-        st.pyplot(plots.plot_regime_beliefs(hist["belief"][0], [REGIME_LABEL[r] for r in hist["regime_names"]]))
+        show_fig(plots.plot_regime_beliefs(hist["belief"][0], [REGIME_LABEL[r] for r in hist["regime_names"]]))
+        st.caption("Takeaway: the model's month-by-month guess about the weather — the tallest band is "
+                   "the mood it believed most. It grows sure of a downturn only *after* the drop starts, "
+                   "never before, because it cannot see the future.")
+    next_step("compare", "One journey is luck; thousands are evidence. Race every plan on the same "
+              "futures.", key="next_journey")
 
 # --------------------------------------------------------------------------- 4
 MARKET_BY_LABEL = {m.label: m.key for m in list_markets()}
@@ -1058,9 +1579,13 @@ def ma_live_scrubber(ma_key):
     dep = ma_deploy(*ma_key)  # cached -> instant; no re-solve
     smart = "Regime-Aware Multi-Asset"
     T = len(dep.dates)
-    step = st.slider("Month (0 = start)", 0, T - 1, min(T - 1, T // 2), key="ma_step")
+    step = st.slider("Scrub to a month of the run", 0, T - 1, min(T - 1, T // 2), key="ma_step")
     mcol, icol = st.columns([1, 1])
     mcol.pyplot(plot_allocation_snapshot(dep, smart, step))
+    mcol.caption("Takeaway: this snapshot shows how the smart plan split your money in the single month you "
+                 "picked with the slider. Drag to a calm month and you'll see mostly stocks; drag into a crisis "
+                 "and you'll see it shift heavily into bonds, gold and cash. The numbers beside it spell out "
+                 "the exact split and the weather it detected.")
     reg = dep.regime_names[int(np.argmax(dep.belief(smart)[step]))]
     icol.metric("Month", f"{dep.dates[step]:%b %Y}")
     icol.metric("Detected weather", WEATHER_EN.get(reg, reg))
@@ -1069,19 +1594,17 @@ def ma_live_scrubber(ma_key):
     icol.metric("Bad-weather belief", pct(dep.risk_belief(smart)[step]))
 
 
-with t_real:
+if page == "history":
     eyebrow("Out-of-sample · real market history · no look-ahead")
     st.markdown('<h1>If you had switched this on in <span class="gbwm-serif">1999</span>…</h1>',
                 unsafe_allow_html=True)
-    intro("🕰️ What you'll see here",
-          "The honest test: we switch the plans on over the **real** history of a world market and make "
-          "them live through dot-com, 2008 and COVID — with no cheating (the model only sees the past "
-          "each month). This is where you judge the <span class='gbwm-rl'>RL</span> brain for real.",
+    intro("What you'll see here",
+          "The honest test: we switch the plans on over the **real** month-by-month history of a world "
+          "market and make them live through dot-com, 2008 and COVID — with no cheating (the model only "
+          "sees the past each month, discovering each crash in real time). This is where you judge the "
+          "<span class='gbwm-rl'>RL</span> brain for real.",
           ["Pick a market and a year, then press **Run the time machine**.",
            "Compare the final balance **and** the worst crash: the smart plan wins on calm, not luck."])
-    st.caption("Roll every plan over the **real** month-by-month history of a world market. The agent only "
-               "ever sees the past — it discovers each crash *in real time* from returns, never with hindsight. "
-               "This is the honest test the simulator was built for.")
     cc = st.columns([2, 1, 1, 1])
     label = cc[0].selectbox("Market", list(MARKET_BY_LABEL))
     mkey = MARKET_BY_LABEL[label]
@@ -1090,15 +1613,24 @@ with t_real:
     offline = cc[3].checkbox("Offline", value=False, help="No internet? Uses a synthetic stand-in.")
     st.caption(f"Using your sidebar plan: start **{money(st.session_state.initial)}**, "
                f"add **{money(st.session_state.contribution)}/mo**. {LONG_NOTE.get(mkey, '')}")
-    if st.button("🕰️ Run the time machine", type="primary"):
-        st.session_state["rd"] = True
-    if st.session_state.get("rd"):
+    # The run is keyed to its exact inputs: changing any input un-runs the page
+    # (with a nudge) instead of silently recomputing something the button no
+    # longer represents.
+    _run_args = (mkey, f"{start_year}-01-01", float(st.session_state.initial),
+                 float(st.session_state.contribution), float(goal_h), offline)
+    if st.button("Run the time machine", type="primary"):
+        st.session_state["rd_args"] = _run_args
+    if st.session_state.get("rd_args") and st.session_state["rd_args"] != _run_args:
+        st.info("You changed the settings — press **Run the time machine** to rerun with them.")
+    if st.session_state.get("rd_args") == _run_args:
         dep = None
         try:
-            dep = honest_deployment(mkey, f"{start_year}-01-01", float(st.session_state.initial),
-                                    float(st.session_state.contribution), float(goal_h), offline)
+            dep = honest_deployment(*_run_args)
         except Exception as e:  # noqa: BLE001
-            st.error(f"Could not run {label} from {start_year}: {e}")
+            st.error(f"We couldn't run **{label}** from {start_year} — the price history may be "
+                     "unavailable for that market or year. Try **Offline** mode or a later start year.")
+            with st.expander("Technical details"):
+                st.code(str(e))
         if dep is not None:
             if dep.source == "synthetic":
                 st.warning("Using **synthetic stand-in data** (no live connection). Illustrative only.")
@@ -1112,68 +1644,97 @@ with t_real:
                 return sc.loc[name, col] if name in sc.index else float("nan")
 
             cols = st.columns(3)
-            card(cols[0], "📉", "All-in stocks — worst crash", pct(_val("Buy & Hold", "Max drawdown")), LOSS)
-            card(cols[1], "🛡️", "Smart adaptive — worst crash",
+            card(cols[0], "", "All-in stocks — worst crash", pct(_val("Buy & Hold", "Max drawdown")), LOSS)
+            card(cols[1], "", "Smart adaptive — worst crash",
                  pct(_val("Regime-Aware G-Learner", "Max drawdown")), GOAL)
             both = bool(_val("Buy & Hold", "Reached goal")) and bool(_val("Regime-Aware G-Learner", "Reached goal"))
-            card(cols[2], "🎯", "Both reached the goal?",
+            card(cols[2], "", "Both reached the goal?",
                  "yes — at a fraction of the risk" if both else "depends on the goal you set", RL)
 
-            st.pyplot(plot_journey(dep))
+            show_fig(plot_journey(dep))
+            chart_keys((RL, "smart adaptive plan"), (LOSS, "all-in stocks"),
+                       (RISK, "glide path"), ("#f4c7bd", "shaded band = a real crisis"),
+                       (INK, "dashed = the goal", "dash"))
+            st.caption("Takeaway: all-in stocks can end highest, but look how deep it plunges in each "
+                       "crisis band. The smart plan usually still reaches the goal while falling far "
+                       "less — a much calmer ride.")
+            with st.expander("How to read the three panels"):
+                st.markdown(
+                    "1. **Balance** — every plan on the same real months; the shaded bands are real "
+                    "crises (dot-com, 2008, COVID).\n"
+                    "2. **% in stocks** — the smart plan's risk dial. The labeled arrows mark it cutting "
+                    "risk *during* each storm: it reacts to what just happened, it never predicts.\n"
+                    "3. **Bad-weather belief** — how sure the brain was that the weather had turned, "
+                    "computed from past returns only. It rises *after* drops begin — the visible proof "
+                    "of no peeking.")
 
             st.subheader("The scorecard — the outcome **and** the ride")
             show = scorecard(dep)
             show.insert(0, "Plan", show["Strategy"].map(lambda n: FRIENDLY_NAME.get(n, n)))
             show = show.drop(columns="Strategy")
             show["Final balance"] = show["Final balance"].map(money)
-            show["Reached goal"] = show["Reached goal"].map(lambda b: "✅ yes" if b else "—")
+            show["Reached goal"] = show["Reached goal"].map(lambda b: "Yes" if b else "No")
             for c in ["Max drawdown", "Worst 12-month", "Growth rate (CAGR)", "Avg equity"]:
                 show[c] = show[c].map(pct)
-            st.dataframe(show, hide_index=True, use_container_width=True)
+            st.dataframe(
+                show, hide_index=True, width="stretch",
+                column_order=["Plan", "Reached goal", "Max drawdown", "Final balance",
+                              "Worst 12-month", "Growth rate (CAGR)", "Avg equity"],
+                column_config={
+                    "Plan": st.column_config.TextColumn("Plan", width="medium"),
+                    "Reached goal": st.column_config.TextColumn("Reached?", width="small"),
+                    "Max drawdown": st.column_config.TextColumn("Worst crash", width="small", help="Worst peak-to-valley fall lived through (lower is better)."),
+                    "Final balance": st.column_config.TextColumn("Final balance", width="small"),
+                    "Worst 12-month": st.column_config.TextColumn("Worst year", width="small", help="Worst rolling 12-month return."),
+                    "Growth rate (CAGR)": st.column_config.TextColumn("Growth", width="small", help="Compound annual growth rate."),
+                    "Avg equity": st.column_config.TextColumn("Avg invested", width="small", help="Average share kept in risky assets."),
+                },
+            )
             st.caption("Sorted safest-first. On one rising market the all-in plan wins on raw final balance — "
                        "but read the **Max drawdown** column: that's the 40–70% crash you'd have lived through. "
                        "The RL agents reach the goal with far less white-knuckle risk.")
 
-            st.subheader("🗣️ What the agent did at the turning points")
+            st.subheader("What the agent did at the turning points")
             for line in diary_sentences(dep):
                 st.markdown("- " + line)
 
-            with st.expander("⏱️ Does *when* you start matter? — sequence-of-returns risk"):
+            with st.expander("Does *when* you start matter? — sequence-of-returns risk"):
                 seq = seq_risk_cached(mkey, float(st.session_state.initial),
                                       float(st.session_state.contribution), 400_000.0, offline)
                 if seq.empty:
                     st.info("Not enough history for this market to compare 1999 / 2000 / 2007 starts.")
                 else:
-                    st.pyplot(plot_sequence_risk(seq))
-                    st.caption("Starting right before a crash (2000, 2007) is the real test. The regime-aware "
-                               "agent's drawdown bar stays low even then — it saw the storm coming and de-risked.")
-            st.caption("⚠️ Educational simulation — costs/taxes simplified, single risky asset, monthly "
+                    show_fig(plot_sequence_risk(seq))
+                    st.caption("Takeaway: 2000 and 2007 starts land right before a crash, which badly "
+                               "hurts the all-in plan. The regime-aware plan's worst-drop bar stays low "
+                               "even then, because it cut risk once the storm began — *when* you start "
+                               "matters far less with the smart plan.")
+            st.caption("Educational simulation — costs/taxes simplified, single risky asset, monthly "
                        "rebalancing. **Not financial advice.**")
-    else:
+    elif not st.session_state.get("rd_args"):
         st.info("Pick a market and press **Run the time machine**.")
+    next_step("multi", "Same honest test, but the brain juggles four assets at once — stocks, bonds "
+              "and gold.", key="next_history")
 
 # --------------------------------------------------------------------------- 4b
-with t_multi:
+if page == "multi":
     eyebrow("Multi-asset live · S&P 500 + international + bonds + gold · no look-ahead")
     st.markdown('<h1>A portfolio that <span class="gbwm-serif">splits itself</span> '
                 'across stocks, bonds and gold.</h1>', unsafe_allow_html=True)
-    intro("🌍 What you'll see here",
+    intro("What you'll see here",
           "Like the time machine, but with **four assets at once** (S&P, international stocks, bonds "
           "and gold). The smart <span class='gbwm-rl'>RL</span> plan loads up on stocks when it's "
-          "sunny and rotates into bonds + gold when it's stormy — all over real history.",
+          "sunny and rotates into bonds + gold when it's stormy — all over real history, discovering "
+          "each crisis in real time (never with the future).",
           ["Adjust your numbers and press **Split my money live**.",
            "Watch the smart plan empty out of stocks during crises and fill up on safe havens."])
-    st.caption("Here the plan splits your money across **four assets at once** and changes it month by "
-               "month with the market weather — more stocks when sunny, more bonds and gold when stormy. "
-               "All over **real** history, discovering each crisis in real time (never with the future).")
 
     uni = list_universe()
-    ICONS = {"us_equity": "🇺🇸", "intl_equity": "🌍", "bonds": "🏦", "gold": "🪙"}
     ACCENT = {"us_equity": RL, "intl_equity": "#7048e8", "bonds": GOAL, "gold": RISK}
     ucols = st.columns(len(uni) + 1)
     for col, a in zip(ucols, uni):
-        card(col, ICONS.get(a.key, "•"), a.label.split(" (")[0], a.note, ACCENT.get(a.key, INK))
-    card(ucols[-1], "💵", "Cash", "The safe part, earning the risk-free rate.", INK)
+        card(col, "", a.label.split(" (")[0], a.note, ACCENT.get(a.key, INK))
+    card(ucols[-1], "", "Cash", "The safe part, earning the risk-free rate.", INK)
 
     st.divider()
     cc = st.columns(4)
@@ -1184,7 +1745,7 @@ with t_multi:
     cc2 = st.columns([1, 2, 1])
     ma_target = cc2[0].number_input("Goal ($)", 50_000, 100_000_000, 600_000, step=50_000, key="ma_target")
     ma_mode_label = cc2[1].selectbox(
-        "Regime honesty level", list(HONESTY_MODES), index=0, key="ma_mode",
+        "How honestly should it learn the weather?", list(HONESTY_MODES), index=0, key="ma_mode",
         help="‘Re-learn year by year’ re-learns the market's seasons every year using ONLY the past "
              "seen so far — the strictest test.")
     ma_offline = cc2[2].checkbox("Offline", value=False, key="ma_offline",
@@ -1196,22 +1757,27 @@ with t_multi:
                f"**{money(ma_amount / per)}/month**.  Universe: "
                f"{' · '.join(a.label.split(' (')[0] for a in uni)} + cash.")
     if mode == "causal_walk_forward":
-        st.info("🧠 *Re-learn year by year* is the most honest and the slowest: it re-learns the regimes "
+        st.info("*Re-learn year by year* is the most honest and the slowest: it re-learns the regimes "
                 "every year using only the past. The **first** run can take ~1–2 min; then it's cached.")
 
-    if st.button("🚀 Split my money live", type="primary", key="ma_run"):
-        st.session_state["ma_done"] = True
-    if st.session_state.get("ma_done"):
+    ma_key = (ma_start, ma_initial, ma_amount, freq, ma_target, mode, ma_offline)
+    if st.button("Split my money live", type="primary", key="ma_run"):
+        st.session_state["ma_args"] = ma_key
+    if st.session_state.get("ma_args") and st.session_state["ma_args"] != ma_key:
+        st.info("You changed the settings — press **Split my money live** to rerun with them.")
+    if st.session_state.get("ma_args") == ma_key:
         spinner_msg = ("Re-learning the regimes year by year over real history…"
                        if mode == "causal_walk_forward"
                        else "Splitting across S&P, international, bonds and gold…")
-        ma_key = (ma_start, ma_initial, ma_amount, freq, ma_target, mode, ma_offline)
         dep = None
         try:
             with st.spinner(spinner_msg):
                 dep = ma_deploy(*ma_key)
         except Exception as e:  # noqa: BLE001
-            st.error(f"Could not run: {e}")
+            st.error("We couldn't run the multi-asset split — the data for one of the four assets "
+                     "may be unavailable. Try **Offline** mode or a later start year.")
+            with st.expander("Technical details"):
+                st.code(str(e))
         if dep is not None:
             if dep.source == "synthetic":
                 st.warning("Using **synthetic data** (offline). Illustrative only.")
@@ -1230,67 +1796,91 @@ with t_multi:
                 return sc.loc[name, col] if name in sc.index else float("nan")
 
             kc = st.columns(3)
-            card(kc[0], "🛡️", "Smart plan — worst crash",
+            card(kc[0], "", "Smart plan — worst crash",
                  pct(_vm("Regime-Aware Multi-Asset", "Max drawdown")), GOAL)
-            card(kc[1], "📉", "All-in S&P — worst crash",
+            card(kc[1], "", "All-in S&P — worst crash",
                  pct(_vm("All-in S&P 500", "Max drawdown")), LOSS)
-            card(kc[2], "🎯", "Smart plan — final balance",
+            card(kc[2], "", "Smart plan — final balance",
                  money(_vm("Regime-Aware Multi-Asset", "Final balance")), RL)
 
             st.subheader("How the 3 portfolios split over time")
-            st.caption("Watch the **smart plan**: in the crisis bands it empties stocks (blue) and fills "
-                       "up on bonds (green) and gold (amber). The other two never move.")
-            st.pyplot(plot_allocation_grid(dep))
+            show_fig(plot_allocation_grid(dep))
+            chart_keys((RL, "US stocks"), ("#7048e8", "international"), (GOAL, "bonds"),
+                       ("#e0a100", "gold"), ("#cdcdc4", "cash"),
+                       (None, "dotted vertical line = a crisis begins"))
+            st.caption("Takeaway: the top strip is the market weather the smart plan detected. The "
+                       "all-in and fixed-mix portfolios never change shape. The smart plan does: at each "
+                       "crisis it empties the stock bands and fills up on bonds and gold, then rotates "
+                       "back once the market recovers.")
 
             st.subheader("Your money over real history")
-            st.pyplot(plot_multi_balances(dep))
+            show_fig(plot_multi_balances(dep))
+            chart_keys((RL, "smart plan"), (LOSS, "all-in S&P"), ("#9aa0a6", "balanced mix"),
+                       (INK, "dashed = the goal", "dash"), ("#f4c7bd", "shaded band = a real crisis"))
+            st.caption("Takeaway: the all-in S&P line climbs highest in calm years but dives deepest in "
+                       "crashes. The smart plan's line is smoother and still reaches the goal — a little "
+                       "top-end growth traded for a much steadier path.")
 
             st.subheader("The scorecard — the outcome **and** the scare")
             show = scorecard(dep)
             show.insert(0, "Portfolio", show["Strategy"].map(ma_friendly))
             show = show.drop(columns="Strategy")
             show["Final balance"] = show["Final balance"].map(money)
-            show["Reached goal"] = show["Reached goal"].map(lambda b: "✅ yes" if b else "—")
+            show["Reached goal"] = show["Reached goal"].map(lambda b: "Yes" if b else "No")
             for c in ["Max drawdown", "Worst 12-month", "Growth rate (CAGR)", "Avg equity"]:
                 show[c] = show[c].map(pct)
             show.columns = ["Portfolio", "Final balance", "Reached goal?", "Worst crash",
                             "Worst 12 months", "Growth (CAGR)", "Avg invested %"]
-            st.dataframe(show, hide_index=True, use_container_width=True)
+            st.dataframe(
+                show, hide_index=True, width="stretch",
+                column_order=["Portfolio", "Reached goal?", "Worst crash", "Final balance",
+                              "Worst 12 months", "Growth (CAGR)", "Avg invested %"],
+                column_config={
+                    "Portfolio": st.column_config.TextColumn("Portfolio", width="medium"),
+                    "Reached goal?": st.column_config.TextColumn("Reached?", width="small"),
+                    "Worst crash": st.column_config.TextColumn("Worst crash", width="small", help="Worst peak-to-valley fall lived through (lower is better)."),
+                    "Final balance": st.column_config.TextColumn("Final balance", width="small"),
+                    "Worst 12 months": st.column_config.TextColumn("Worst year", width="small", help="Worst rolling 12-month return."),
+                    "Growth (CAGR)": st.column_config.TextColumn("Growth", width="small", help="Compound annual growth rate."),
+                    "Avg invested %": st.column_config.TextColumn("Avg invested", width="small", help="Average share kept in risky assets."),
+                },
+            )
             st.caption("Sorted safest to riskiest. All-in S&P can end with more money in a bull market — "
                        "but read the **worst crash**: that's the scare you'd have lived. The smart plan "
                        "reaches the goal with a fraction of the risk.")
 
-            st.subheader("🔴 Live: scrub through time and watch the portfolio change")
+            st.subheader("Live: scrub through time and watch the portfolio change")
             ma_live_scrubber(ma_key)
 
-            st.subheader("🗣️ What the plan did at the key moments")
+            st.subheader("What the plan did at the key moments")
             for line in multi_asset_diary(dep):
                 st.markdown("- " + line)
 
-            with st.expander("🔍 Why is it honest? (no look-ahead)"):
+            with st.expander("Why is it honest? (no look-ahead)"):
                 st.markdown(
                     "- **Real aligned data**: S&P, international, bonds and gold, month by month, since all four exist.\n"
                     "- **The regime is read off the stock market** (the S&P): so a low-volatility asset (bonds) "
                     "doesn't mask the crashes.\n"
                     "- **The belief is causal**: it rises *after* the fall happens, never before.\n"
                     f"- **Regimes {mode_txt}**.")
-            st.caption("⚠️ Educational simulation — costs/taxes simplified, monthly rebalancing. "
+            st.caption("Educational simulation — costs/taxes simplified, monthly rebalancing. "
                        "**Not financial advice.**")
-    else:
+    elif not st.session_state.get("ma_args"):
         st.info("Adjust your numbers and press **Split my money live**.")
+    next_step("coverage", "Last stop: how every slide of the proposal became the code you just used.",
+              key="next_multi")
 
 # --------------------------------------------------------------------------- 5
-with t_ai:
-    st.header("How the AI learns — this is reinforcement learning")
-    intro("🤖 What you'll see here",
+if page == "brain":
+    eyebrow("Inside the policy · reinforcement learning · the learned artifact")
+    st.markdown('<h1>The strategy the AI <span class="gbwm-serif">taught itself</span>.</h1>',
+                unsafe_allow_html=True)
+    intro("What you'll see here",
           "A look *inside* the RL brain. There's no fixed formula: the computer treats your goal as a "
           "game and learns the strategy by playing it thousands of times. That's **reinforcement "
           "learning (RL)** <span class='gbwm-rl'>RL</span>.",
-          ["The color map = how much stock to hold by balance and time (🔴 more risk, 🟢 safer).",
-           "The curve shows the agent going from clueless to nearly the exact solution."])
-    st.markdown("There's **no fixed formula** for the allocation. The computer treats your goal as a game "
-                "and **learns a strategy by playing it thousands of times** against simulated markets. "
-                "That's **reinforcement learning (RL)**.")
+          ["The weather maps show the **whole** learned strategy: red = hold more stocks, blue = play safe.",
+           "The curve below shows the agent going from clueless to nearly the exact solution."])
     st.markdown("- **Q-Learning** — learn by *trial and error*, no model of the market.\n"
                 "- **G-Learning** *(our main agent)* — a smarter, entropy-regularized version of Q-learning "
                 "we can solve exactly; greedy Q-learning is its zero-temperature limit.\n"
@@ -1300,21 +1890,29 @@ with t_ai:
         st.latex(r"\pi(a\mid s)\propto\pi_0(a\mid s)\,e^{\beta G(s,a)},\quad F(s)=\tfrac1\beta\log\!\sum_a\pi_0(a\mid s)e^{\beta G(s,a)}\;\text{(G-learning)}")
         st.caption("As β→∞, G-learning becomes greedy value iteration (Q-learning). Dixon & Halperin, arXiv:2002.10990.")
     st.subheader("1) The strategy the AI learned")
-    st.caption("Each square = how much to hold in stocks (🔴 more stocks/risk, 🟢 more cash/safe). It takes "
-               "more risk when far **below** the goal and protects gains **above** it — nobody coded that.")
-    hc = st.columns([1, 1])
-    agent_label = hc[0].selectbox("Show the learned policy of",
-                                  ["Smart adaptive plan", "Goal-based plan", "Self-taught (Q-learning)"])
-    regime = None
+    st.caption("Each square is one situation — your balance (vertical) at a moment in time (horizontal). "
+               "The color is the brain's answer for that situation: **red = hold more stocks (take risk), "
+               "blue = hold more cash (play safe)**. It learned to push when far **below** the goal and to "
+               "protect gains **above** it — nobody coded that.")
+    agent_label = st.selectbox("Show the learned policy of",
+                               ["Smart adaptive plan", "Goal-based plan", "Self-taught (Q-learning)"])
     if agent_label == "Smart adaptive plan":
-        regime = hc[1].selectbox("In which market mood?", cfg.market.regime_names,
-                                 format_func=lambda n: REGIME_LABEL[n])
         pol = build_policies(key)["Regime-Aware G-Learner"]
-    elif agent_label == "Goal-based plan":
-        pol = build_policies(key)["G-Learner"]
+        _rlabels = {r: f"{WEATHER.get(r, (r,))[0]} ({REGIME_LABEL.get(r, r).split(' · ')[0]})"
+                    for r in cfg.market.regime_names}
+        show_fig(plots.plot_policy_regime_grid(pol, target, cfg.steps_per_year,
+                                               regime_names=cfg.market.regime_names,
+                                               regime_labels=_rlabels))
+        st.caption("Takeaway: **four maps, one brain** — this is the deck's central claim made visible. "
+                   "Compare the same square across panels: in Stormy the red risk-on region shrinks and "
+                   "the safe blue grows. The difference between the panels IS the regime-awareness.")
     else:
-        pol = trained_qlearner(key)
-    st.pyplot(plots.plot_policy_heatmap(pol, target, cfg.steps_per_year, regime=regime))
+        pol = (build_policies(key)["G-Learner"] if agent_label == "Goal-based plan"
+               else trained_qlearner(key))
+        show_fig(plots.plot_policy_heatmap(pol, target, cfg.steps_per_year))
+        st.caption("Takeaway: the whole strategy this agent taught itself, as one map. Follow any "
+                   "horizontal line (one balance level) left to right to read what it does as the "
+                   "deadline approaches. This agent is weather-blind — one map fits all regimes.")
     st.subheader("2) Watch Q-learning learn by trial and error")
     ql = trained_qlearner(key)
     exact = run_comparison(key)["G-Learner"]["p_goal"]
@@ -1323,11 +1921,14 @@ with t_ai:
     cax.plot(curve[:, 0], curve[:, 1], "-o", color=INK, lw=1.8, ms=3, label="Q-learner (learning)")
     cax.axhline(exact, color=GOAL, ls="--", lw=1.6, label="exact G-learning solution")
     cax.set(xlabel="training episodes (simulated lifetimes)", ylabel="chance of reaching goal",
-            title="The agent starts clueless and learns", ylim=(0, 1)); cax.legend()
-    st.pyplot(cfig)
-    st.caption(f"From {pct(curve[0,1])} to {pct(curve[-1,1])} just by practising. Exact G-Learner reaches "
-               f"{pct(exact)} — model-free RL approximates it from experience.")
-    with st.expander("🧠 Advanced: train a deep-RL agent (PPO) live (needs the 'rl' extra; ~1–2 min)"):
+            title="The agent starts clueless and learns", ylim=(0, 1))
+    _finish_fig(cfig, cax)
+    show_fig(cfig)
+    chart_keys((INK, "Q-learner while practising"), (GOAL, "exact G-learning answer", "dash"))
+    st.caption(f"Takeaway: the curve climbs from {pct(curve[0,1])} to {pct(curve[-1,1])} as the agent "
+               f"practises — it starts clueless and gets good purely by trial and error, creeping up to "
+               f"the exact answer ({pct(exact)}) with no formula handed to it.")
+    with st.expander("Advanced: train a deep-RL agent (PPO) live (needs the 'rl' extra; ~1–2 min)"):
         if st.button("Train PPO now"):
             prog = st.progress(0.0, text="starting…")
             try:
@@ -1341,48 +1942,35 @@ with t_ai:
                 pax.plot(arr[:, 0], arr[:, 1], "-o", color="#8e44ad", lw=1.8, ms=3)
                 pax.axhline(exact, color=GOAL, ls="--", lw=1.4, label="G-learning")
                 pax.set(xlabel="training steps", ylabel="chance of reaching goal",
-                        title="Deep RL (PPO) learning live", ylim=(0, 1)); pax.legend()
-                st.pyplot(pfig); st.success("A neural network learned the allocation from scratch.")
+                        title="Deep RL (PPO) learning live", ylim=(0, 1))
+                _finish_fig(pfig, pax)
+                show_fig(pfig)
+                st.caption("Takeaway: a neural-network agent (PPO) learning live — its chance of "
+                           "reaching the goal rises toward the dashed G-Learner line, proving deep RL "
+                           "can learn the allocation from scratch too.")
+                st.success("A neural network learned the allocation from scratch.")
             except Exception as e:  # noqa: BLE001
                 st.error(f"Couldn't train PPO ({e}). Install:  pip install -e \".[rl]\"")
-
-# --------------------------------------------------------------------------- 6
-with t_simple:
-    st.header("The simple version — climbing a mountain")
-    intro("🧒 What you'll see here",
-          "The simplest explanation, like for a kid: investing toward a goal is like climbing a "
-          "mountain in good or bad weather. Here we tell it as that story and narrate one journey.")
-    st.markdown(
-        "- 🏔️ **The summit** is your money goal.\n- 🧗 **How high you are** is your current balance.\n"
-        "- 🌦️ **The weather** is the market mood — calm, sunny, or stormy.\n"
-        "- 🎒 **How risky a path you take** is how much you put in stocks vs. safe cash.\n\n"
-        "If the weather is good and you're behind schedule, you climb faster (more stocks). If a storm "
-        "rolls in and you're near the top, you slow down and protect what you have (more cash).\n\n"
-        "The **smart adaptive plan** reacts to **time left**, **distance to your goal**, *and* the "
-        "**market mood** — a regular target-date fund only reacts to time.")
-    pick5 = st.selectbox("Narrate one journey", ["Regime-Aware G-Learner", "G-Learner"],
-                         format_func=lambda n: FRIENDLY_NAME[n], key="eli5")
-    hist5, _ = single_path(key, pick5, 7)
-    ep = EpisodeContext.from_histories(hist5, target, cfg.steps_per_year)
-    st.success("🗣️ " + ADVISOR.explain_episode(ep))
+    next_step("plan", "Now put the brain to work on your own numbers.", key="next_brain")
 
 # --------------------------------------------------------------------------- 7
-with t_cov:
+if page == "coverage":
     eyebrow("CME 241 · midterm proposal → working build")
-    st.header("Everything in the proposal, covered")
-    intro("📋 What you'll see here",
+    st.markdown('<h1>Everything in the proposal, <span class="gbwm-serif">covered</span>.</h1>',
+                unsafe_allow_html=True)
+    intro("What you'll see here",
           "The technical part: how each slide of the course proposal became code that actually runs "
           "here (the MDP, the RL methods and the full coverage).")
-    st.caption("This maps my pitch deck slide-by-slide to what actually runs here.")
+    st.link_button("Open the pitch deck", "https://orosergio.github.io/RegimeAwareGBWM/")
 
     st.subheader("The MDP (proposal slide 6)")
-    mdp = [("🎒", "STATE", "wealth · time left · gap to goal · market-regime belief", RL),
-           ("🎛️", "ACTION", "how much in stocks — conservative / balanced / aggressive", RISK),
-           ("🏁", "REWARD", "goal progress − shortfall − risk / turnover penalty", GOAL),
-           ("🌐", "MARKET", "returns + your monthly contribution → next state", INK)]
+    mdp = [("STATE", "wealth · time left · gap to goal · market-regime belief", RL),
+           ("ACTION", "how much in stocks — conservative / balanced / aggressive", RISK),
+           ("REWARD", "goal progress − shortfall − risk / turnover penalty", GOAL),
+           ("MARKET", "returns + your monthly contribution → next state", INK)]
     cols = st.columns(4)
-    for col, (ico, lbl, val, acc) in zip(cols, mdp):
-        card(col, ico, lbl, val, acc)
+    for col, (lbl, val, acc) in zip(cols, mdp):
+        card(col, "", lbl, val, acc)
     st.caption("The loop: observe **state** → take **action** → **market** moves & adds your contribution "
                "→ get **reward** → repeat each month. Solved as a Markov Decision Process.")
 
@@ -1394,7 +1982,7 @@ with t_cov:
          ["Monte Carlo", "thousands of simulated lifetimes", "evaluation harness"],
          ["Policy gradient", "neural-net agents", "PPO / SAC"]],
         columns=["CME 241 concept", "What it does", "In this build"])
-    st.dataframe(methods, hide_index=True, use_container_width=True)
+    st.dataframe(methods, hide_index=True, width="stretch")
 
     st.subheader("Slide-by-slide coverage")
     cov_path = ROOT / "COVERAGE.md"
@@ -1416,3 +2004,8 @@ with t_cov:
         "- **Tools** — Farama Gymnasium; Stable-Baselines3 (PPO/SAC).")
     st.caption("Honest scope: GIRL (inverse RL) and the paper's analytic Gaussian policy are not "
                "implemented; the stochastic Gibbs G-learning policy is available via `greedy: false`.")
+    st.divider()
+    _end = st.columns([1.15, 2.2])
+    if _end[0].button("Back to the live bank", key="cov_to_bank", width="stretch"):
+        goto("bank")
+    _end[1].caption("That's the whole story — the best way to end it is to go play with the brain.")

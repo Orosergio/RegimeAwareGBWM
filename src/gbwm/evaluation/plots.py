@@ -12,10 +12,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-# ---- Deck palette (mirrors docs/styles.css: Apple-keynote energy) ----------
-INK = "#0a0b0d"
-PAPER = "#fafaf7"
-MUTED = "#6b6b66"
+# ---- Deck palette (mirrors the app CSS tokens so charts blend into the page) ----------
+INK = "#15120d"    # == app --ink (warm near-black); was #0a0b0d (cooler, off by a hair)
+PAPER = "#f7f4ee"  # == app --paper; was #fafaf7, which painted a visibly lighter rectangle on the page
+MUTED = "#5f574c"  # darker than #6b6b66 so chart ticks/labels clear WCAG AA on paper
 GOAL = "#2e9e5b"   # green  — safety / goal
 RISK = "#cf8a2c"   # amber  — risk / regime
 RL = "#4c6ef5"     # blue   — RL / data
@@ -44,10 +44,10 @@ def apply_deck_style() -> None:
         "axes.spines.top": False,
         "axes.spines.right": False,
         "axes.grid": True,
-        "grid.color": "#e7e7e2",
+        "grid.color": "#d8d3c8",
         "grid.linewidth": 0.8,
-        "font.size": 11,
-        "axes.titlesize": 13,
+        "font.size": 12,
+        "axes.titlesize": 13.5,
         "axes.titleweight": "600",
         "legend.frameon": False,
         "figure.autolayout": True,
@@ -123,27 +123,98 @@ def plot_strategy_comparison(results: dict, ax=None):
     return ax.figure
 
 
+# Risk colormap: red = risk-on, blue = safe. RdYlBu is colorblind-safe (red–blue
+# axis survives deuteranopia, unlike the previous RdYlGn) and the contour labels
+# below make the surface readable with no color at all.
+RISK_CMAP = "RdYlBu_r"
+
+
+def _heatmap_panel(ax, surf, w, keep, target, steps_per_year, *, frontier=True):
+    """Draw one policy surface on ``ax``; returns the mesh (for a shared colorbar)."""
+    T = surf.shape[0]
+    years = np.arange(T + 1) / steps_per_year
+    yw = np.concatenate([w[keep], [w[keep][-1] * 1.001]]) / target
+    ax.grid(False)  # rcParams grid would draw white lines over the surface
+    mesh = ax.pcolormesh(years, yw, surf[:, keep].T, cmap=RISK_CMAP, vmin=0, vmax=1, shading="flat")
+    ax.axhline(1.0, color="black", lw=1.1, ls="--")
+    if frontier:
+        # One labeled contour at the 50/50 risk frontier — readable without color.
+        # Tiny-wealth rows (< 0.2× goal) are skipped: the log wealth grid stripes
+        # there and would repeat the label over a bin artifact.
+        try:
+            yc = (years[:-1] + years[1:]) / 2
+            wc = (yw[:-1] + yw[1:]) / 2
+            sub = wc >= 0.2
+            cs = ax.contour(yc, wc[sub], surf[:, keep].T[sub], levels=[0.5],
+                            colors=[INK], linewidths=0.8, alpha=0.6)
+            ax.clabel(cs, fmt=lambda v: "50/50 frontier", fontsize=6.5, inline=True)
+        except Exception:  # degenerate (flat) surfaces have no contours — fine
+            pass
+    return mesh
+
+
+def _risk_colorbar(fig, mesh, ax):
+    cb = fig.colorbar(mesh, ax=ax)
+    cb.set_ticks([0.0, 0.5, 1.0])
+    cb.set_ticklabels(["0% — all safe", "50 / 50", "100% — all stocks"])
+    cb.ax.tick_params(labelsize=8)
+    return cb
+
+
 def plot_policy_heatmap(policy, target: float, steps_per_year: int = 12,
                         regime=None, max_wealth_mult: float = 2.5, ax=None):
     """Heatmap of the *learned* policy: % in stocks over wealth (y) × time (x).
 
     Works for any tabular agent exposing ``surface()`` and ``w_grid`` (G-Learner,
     Regime-Aware G-Learner, Q-Learner). This visualizes the actual RL artifact —
-    the policy the agent learned.
+    the policy the agent learned. Self-teaching: dashed goal line, labeled
+    contours ("50% stocks"), and plain-words hints for the two halves.
     """
     surf = policy.surface(regime)            # (T, n_wbins)
     w = policy.w_grid
     keep = w <= max_wealth_mult * target
-    T = surf.shape[0]
-    years = np.arange(T + 1) / steps_per_year
-    yw = np.concatenate([w[keep], [w[keep][-1] * 1.001]]) / target
     if ax is None:
         _, ax = plt.subplots(figsize=(7.2, 4))
-    mesh = ax.pcolormesh(years, yw, surf[:, keep].T, cmap="RdYlGn_r", vmin=0, vmax=1, shading="flat")
-    ax.axhline(1.0, color="black", lw=1.2, ls="--")
-    ax.text(years[-1] * 0.99, 1.02, "goal", ha="right", va="bottom", fontsize=8)
-    ax.set(xlabel="years from now", ylabel="wealth (× goal)",
-           title="Learned policy — share held in stocks")
-    cb = ax.figure.colorbar(mesh, ax=ax)
-    cb.set_label("% in stocks")
+    mesh = _heatmap_panel(ax, surf, w, keep, target, steps_per_year)
+    years_end = surf.shape[0] / steps_per_year
+    ax.text(years_end * 0.99, 1.02, "goal", ha="right", va="bottom", fontsize=8)
+    ax.text(0.02, 0.97, "ahead of the goal → it locks in safety", transform=ax.transAxes,
+            fontsize=7.5, color=INK, alpha=0.75, va="top")
+    ax.text(0.02, 0.12, "behind the goal → it pushes harder", transform=ax.transAxes,
+            fontsize=7.5, color=INK, alpha=0.75, va="bottom")
+    ax.set(xlabel="years from now", ylabel="wealth (× goal)")
+    ax.set_title("Learned policy — share held in stocks", fontsize=12, loc="left")
+    _risk_colorbar(ax.figure, mesh, ax)
     return ax.figure
+
+
+def plot_policy_regime_grid(policy, target: float, steps_per_year: int = 12,
+                            regime_names: list[str] | None = None,
+                            regime_labels: dict[str, str] | None = None,
+                            max_wealth_mult: float = 2.5):
+    """The thesis figure: the SAME learned brain, one policy map per market regime.
+
+    Side by side, the regime-dependence is visible at a glance (no recall needed):
+    in bad weather the red risk-on region shrinks and the safe blue region grows.
+    """
+    names = list(regime_names or ["bull", "stable", "high_vol", "bear"])
+    labels = regime_labels or {}
+    w = policy.w_grid
+    keep = w <= max_wealth_mult * target
+    fig, axes = plt.subplots(1, len(names), figsize=(2.75 * len(names) + 1.6, 3.4), sharey=True)
+    fig.set_layout_engine("constrained")     # tight_layout fights a shared colorbar
+    axes = np.atleast_1d(axes)
+    mesh = None
+    for ax, rn in zip(axes, names):
+        mesh = _heatmap_panel(ax, policy.surface(rn), w, keep, target, steps_per_year,
+                              frontier=False)
+        ax.set_title(labels.get(rn, rn), fontsize=10.5)
+        ax.set_xlabel("years from now", fontsize=8.5)
+        ax.tick_params(labelsize=8)
+    axes[0].set_ylabel("wealth (× goal)")
+    axes[-1].text(0.97, 1.03, "goal", transform=axes[-1].get_yaxis_transform(),
+                  ha="right", va="bottom", fontsize=7.5)
+    _risk_colorbar(fig, mesh, list(axes))
+    fig.suptitle("One brain, four weathers — the same situation gets a different answer in each regime",
+                 fontsize=11.5, fontweight="600")
+    return fig

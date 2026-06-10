@@ -67,9 +67,12 @@ wealth and your goal*, and *the detected market regime* at once.
   of each asset, and *why*; a buy-&-hold benchmark, opt-in trading costs, Sharpe/drawdown
   metrics, a wallet leaderboard, CSV export and JSON save/load round out the bank. No real
   money; the engine reproduces the validated backtest exactly (`tests/test_sandbox.py`).
-- **Streamlit demo** deployable to Streamlit Cloud (loads pre-trained checkpoints). English UI;
-  every tab opens with a plain-language "what you'll see here" intro, and a **📖 How it works**
-  guide tab explains the whole project (and where RL is used) for a smart 10-year-old.
+- **Streamlit demo** deployable to Streamlit Cloud (loads pre-trained checkpoints). English UI,
+  organized as a guided story — **Learn → Play → Proof** — where one page renders at a time and
+  every page ends with a "Next" button. The landing page opens with a **live demo of the learned
+  policy** (set the market weather, your position and years left; watch the brain's stocks/cash
+  decision change), and every chart ships with a reading key + plain-language takeaway, written
+  for a smart 10-year-old.
 
 ---
 

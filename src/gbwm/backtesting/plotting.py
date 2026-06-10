@@ -40,6 +40,22 @@ _ASSET_COLOR = {
 }
 _CASH_COLOR = "#cdcdc4"
 
+# Friendly plan names — keep chart legends and the app's tables saying the same
+# thing (mirrors the app's FRIENDLY_NAME map; multi-asset names come from
+# STRATEGY_LABELS via :func:`_multi_label`).
+_FRIENDLY = {
+    "Buy & Hold": "All-in stocks",
+    "60/40": "Classic 60/40 mix",
+    "Glide Path": "Target-date glide path",
+    "G-Learner": "Goal-based plan",
+    "Regime-Aware G-Learner": "Smart adaptive plan",
+    "Q-Learner": "Self-taught (Q-learning)",
+}
+
+
+def _label(name: str) -> str:
+    return _FRIENDLY.get(name) or _multi_label(name)
+
 
 def _shade_crises(ax, dates: pd.DatetimeIndex, label: bool = False) -> None:
     lo, hi = dates[0], dates[-1]
@@ -79,7 +95,7 @@ def plot_journey(
         c = _STRAT_COLOR.get(name, MUTED)
         lw = 2.6 if name in (smart, naive) else 1.3
         alpha = 1.0 if name in (smart, naive) else 0.55
-        ax1.plot(t, w, color=c, lw=lw, alpha=alpha, label=name)
+        ax1.plot(t, w, color=c, lw=lw, alpha=alpha, label=_label(name))
     ax1.axhline(dep.target, color=INK, lw=1.4, ls="--")
     ax1.text(t[1], dep.target, "  goal", va="bottom", ha="left", fontsize=8, color=INK)
     _shade_crises(ax1, dates, label=True)
@@ -93,10 +109,24 @@ def plot_journey(
     if smart in dep.results:
         eq = dep.equity(smart)
         ax2.fill_between(dates, 0, eq * 100, color=RL, alpha=0.20)
-        ax2.plot(dates, eq * 100, color=RL, lw=2.0, label=f"{smart} (adapts)")
+        ax2.plot(dates, eq * 100, color=RL, lw=2.0, label=f"{_label(smart)} (adapts)")
+        # On-canvas teaching: label the deepest risk cut inside each crisis band,
+        # so the reaction is read off the chart itself, not from a caption.
+        for cr in CRISES:
+            a = pd.Timestamp(cr.start + "-01")
+            b = pd.Timestamp(cr.end + "-28")
+            mask = (dates >= a) & (dates <= b)
+            if not mask.any():
+                continue
+            sub = np.asarray(eq[mask], dtype=float) * 100
+            i = int(np.argmin(sub))
+            d0, v = dates[mask][i], float(sub[i])
+            ax2.annotate(f"cut to {v:.0f}%", xy=(d0, v), xytext=(d0, min(v + 30, 86)),
+                         fontsize=7.5, color=INK, ha="center",
+                         arrowprops=dict(arrowstyle="-", color=INK, lw=0.7, alpha=0.6))
     if naive in dep.results:
         ax2.plot(dates, dep.equity(naive) * 100, color=LOSS, lw=1.6, ls="--",
-                 label=f"{naive} (always 100%)")
+                 label=f"{_label(naive)} (always 100%)")
     _shade_crises(ax2, dates)
     ax2.set(ylabel="% in stocks", ylim=(0, 105),
             title="The smart agent dials risk up and down; buy-and-hold never moves")
@@ -153,7 +183,7 @@ def _stack_allocation(ax, dep, strategy: str) -> None:
     cash = np.clip(1.0 - W.sum(axis=1), 0.0, 1.0)
     stack = np.column_stack([W, cash]).T            # (A+1, T)
     colors = [_ASSET_COLOR.get(k, MUTED) for k in dep.asset_keys] + [_CASH_COLOR]
-    labels = list(dep.asset_labels) + ["Efectivo"]
+    labels = list(dep.asset_labels) + ["Cash"]
     ax.stackplot(dep.dates, stack, colors=colors, labels=labels, alpha=0.92)
     ax.set_ylim(0, 1)
     ax.margins(x=0)
@@ -175,8 +205,8 @@ def plot_allocation_grid(dep, strategies: list[str] | None = None,
     reg_src = regime_strategy if regime_strategy in dep.results else strategies[0]
     reg = dep.results[reg_src].histories["regime"][0]
     _regime_ribbon(rax, dep.dates, reg, dep.regime_names)
-    rax.set_title("El clima del mercado que detectó el plan inteligente "
-                  "(verde=bonanza · azul=normal · ámbar=nervioso · rojo=crisis)",
+    rax.set_title("Market weather the smart plan detected "
+                  "(green=bull · blue=stable · amber=choppy · red=bear)",
                   fontsize=10, loc="left")
     plt.setp(rax.get_xticklabels(), visible=False)
 
@@ -205,10 +235,10 @@ def plot_multi_balances(dep, figsize: tuple[float, float] = (11, 4.6)):
         ax.plot(t, dep.wealth(name), color=_STRAT_COLOR.get(name, MUTED), lw=2.3,
                 label=_multi_label(name))
     ax.axhline(dep.target, color=INK, lw=1.3, ls="--")
-    ax.text(t[1], dep.target, "  meta", va="bottom", ha="left", fontsize=8, color=INK)
+    ax.text(t[1], dep.target, "  goal", va="bottom", ha="left", fontsize=8, color=INK)
     _shade_crises(ax, dates, label=True)
-    ax.set(ylabel="saldo ($)", xlabel="año",
-           title=f"Tu dinero sobre la historia real ({dates[0]:%b %Y} → {dates[-1]:%b %Y})")
+    ax.set(ylabel="balance ($)", xlabel="year",
+           title=f"Your money over real history ({dates[0]:%b %Y} → {dates[-1]:%b %Y})")
     ax.legend(loc="upper left", fontsize=9)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"${x/1000:.0f}k"))
     ax.margins(x=0)
@@ -222,7 +252,7 @@ def plot_allocation_snapshot(dep, strategy: str, step: int,
     W = dep.weights(strategy)[step]
     cash = max(0.0, 1.0 - float(W.sum()))
     vals = list(W) + [cash]
-    labels = list(dep.asset_labels) + ["Efectivo"]
+    labels = list(dep.asset_labels) + ["Cash"]
     colors = [_ASSET_COLOR.get(k, MUTED) for k in dep.asset_keys] + [_CASH_COLOR]
     keep = [(v, l, c) for v, l, c in zip(vals, labels, colors) if v > 0.005]
     vv, ll, cc = zip(*keep)
@@ -250,7 +280,7 @@ def plot_sequence_risk(seq_df: pd.DataFrame, metric: str = "Max drawdown",
     for i, strat in enumerate(strategies):
         sub = seq_df[seq_df["Strategy"] == strat].set_index("Start")
         vals = [sub.loc[s, metric] * 100 if s in sub.index else 0 for s in starts]
-        ax.bar(x + i * width, vals, width, label=strat, color=_STRAT_COLOR.get(strat, MUTED))
+        ax.bar(x + i * width, vals, width, label=_label(strat), color=_STRAT_COLOR.get(strat, MUTED))
     ax.set_xticks(x + width * (n - 1) / 2)
     ax.set_xticklabels([f"started {s}" for s in starts])
     ax.set(ylabel=f"{metric} (%)",
