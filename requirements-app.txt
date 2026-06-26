@@ -6,3 +6,7 @@ pandas>=2.0
 pyyaml>=6.0
 matplotlib>=3.7
 streamlit>=1.37
+
+# Real-data providers (without these the app falls back to clearly-flagged synthetic data)
+yfinance>=0.2          # real market data for Time machine / Multi-asset / Live bank
+pandas-datareader>=0.10  # FRED macro series (optional)

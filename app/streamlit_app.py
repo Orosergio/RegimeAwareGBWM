@@ -1,6 +1,6 @@
 """Regime-Aware GBWM — interactive goal planner + reinforcement-learning lab.
 
-Styled to match the CME 241 proposal deck (docs/): Geist + Instrument Serif,
+Styled to match the CME 241 proposal deck (docs/): Hanken Grotesk + Newsreader,
 warm paper / ink palette, goal-green / risk-amber / RL-blue / loss-red accents.
 
 Navigation is a guided story in three phases — Learn (How it works · Inside the
@@ -66,39 +66,40 @@ st.markdown(
 st.markdown(
     """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;1,400;1,500&display=swap');
 :root{
   --paper:#f7f4ee; --card:#fffdf8; --ink:#15120d; --muted-strong:#6a6157;
   --line:rgba(21,18,13,.12); --hair:rgba(21,18,13,.07);
-  --accent:#1c6b50; --accent-soft:rgba(28,107,80,.10);
+  --accent:oklch(0.60 0.13 156); --accent-soft:oklch(0.60 0.13 156 / 0.12);
   --shadow:0 1px 2px rgba(21,18,13,.03), 0 14px 34px -22px rgba(21,18,13,.28);
   --shadow-lift:0 1px 2px rgba(21,18,13,.04), 0 22px 48px -24px rgba(21,18,13,.36);
   --ease:cubic-bezier(.2,.7,.2,1);
 }
-html, body, [class*="css"], .stApp, .stMarkdown, p, div, span, label { font-family: 'Geist', system-ui, sans-serif; }
+html, body, [class*="css"], .stApp, .stMarkdown, p, div, span, label { font-family: 'Hanken Grotesk', system-ui, sans-serif; }
 .stApp { background: var(--paper); color: var(--ink); }
 [data-testid="stHeader"] { background: transparent; }
 .block-container { padding-top: 2.6rem; max-width: 1200px; }
+[data-testid="stNotification"], [data-testid="stAlert"] { background: var(--card) !important; border: 1px solid var(--line) !important; border-left: 3px solid var(--accent) !important; color: var(--ink) !important; border-radius: 12px !important; box-shadow: var(--shadow) !important; } [data-testid="stAlertContainer"] { background: transparent !important; color: var(--ink) !important; } [data-testid="stAlert"] [data-testid="stAlertContainer"] p { color: var(--ink) !important; } [data-testid="stAlert"] svg { fill: var(--muted-strong) !important; color: var(--muted-strong) !important; }
 ::selection { background: var(--accent-soft); }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb { background: rgba(21,18,13,.30); border-radius: 8px; }
 *::-webkit-scrollbar-thumb:hover { background: rgba(21,18,13,.48); }
 
 /* ---- type scale ---- */
-h1, h2, h3, h4 { font-family: 'Geist', sans-serif; color: var(--ink); font-weight: 600; letter-spacing: -.025em; }
-h1 { font-size: 2.55rem; line-height: 1.05; letter-spacing: -.042em; margin: .15rem 0 .35rem; }
-h2 { font-size: 1.5rem; letter-spacing: -.03em; }
-h3 { font-size: 1.16rem; }
+h1, h2, h3, h4 { font-family: 'Hanken Grotesk', sans-serif; color: var(--ink); font-weight: 600; letter-spacing: -.025em; }
+h1 { font-size: 3.4rem; line-height: 1.0; letter-spacing: -.045em; margin: .1rem 0 .6rem; }
+h2 { font-size: 1.95rem; letter-spacing: -.035em; }
+h3 { font-size: 1.3rem; }
 .stMarkdown p, .stMarkdown li { color: #423c33; line-height: 1.6; }
-.gbwm-serif { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; letter-spacing: -.005em; }
-.gbwm-eyebrow { font-family: 'Geist Mono', monospace; font-size: .72rem; letter-spacing: .24em;
+.gbwm-serif { font-family: 'Newsreader', serif; font-style: italic; font-weight: 400; letter-spacing: -.005em; }
+.gbwm-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .24em;
   text-transform: uppercase; color: var(--muted-strong); }
-.gbwm-sub { font-family: 'Geist Mono', monospace; font-size: .72rem; letter-spacing: .15em;
+.gbwm-sub { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .15em;
   text-transform: uppercase; color: var(--muted-strong); }
 
 /* ---- metrics (tabular numerals, quiet card) ---- */
 [data-testid="stMetric"] { background: var(--card); border: 1px solid var(--hair); border-radius: 12px; padding: 12px 15px; }
-[data-testid="stMetricValue"] { font-family: 'Geist Mono', monospace; font-weight: 600; letter-spacing: -.02em;
+[data-testid="stMetricValue"] { font-family: 'IBM Plex Mono', monospace; font-weight: 600; letter-spacing: -.02em;
   color: var(--ink); font-variant-numeric: tabular-nums; }
 [data-testid="stMetricLabel"] p { color: var(--muted-strong); font-size: .82rem; }
 
@@ -117,7 +118,7 @@ h3 { font-size: 1.16rem; }
   transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease); }
 .gbwm-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line); }
 .gbwm-card .ico { font-size: 1.22rem; opacity: .92; }
-.gbwm-card .lbl { font-family: 'Geist Mono', monospace; font-size: .66rem; letter-spacing: .16em;
+.gbwm-card .lbl { font-family: 'IBM Plex Mono', monospace; font-size: .66rem; letter-spacing: .16em;
   text-transform: uppercase; color: var(--muted-strong); margin-top: 9px; }
 .gbwm-card .val { font-size: 1.0rem; margin-top: 5px; line-height: 1.45; color: var(--ink); }
 .gbwm-card .dot { position: absolute; top: 16px; right: 16px; width: 7px; height: 7px; border-radius: 50%; }
@@ -134,14 +135,14 @@ h3 { font-size: 1.16rem; }
 /* ---- RL badge (quiet, monospace) ---- */
 .gbwm-rl { display: inline-block; background: transparent; color: var(--accent);
   border: 1px solid rgba(28,107,80,.34); border-radius: 6px; padding: 1px 7px;
-  font-family: 'Geist Mono', monospace; font-weight: 600; font-size: .72rem; letter-spacing: .03em; }
+  font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: .72rem; letter-spacing: .03em; }
 
 /* ---- weather pill ---- */
 .gbwm-pill { display: inline-block; padding: 5px 14px; border-radius: 999px; font-weight: 600;
   font-size: .92rem; border: 1px solid var(--hair); }
 
 /* ---- balance odometer ---- */
-.gbwm-odo { font-family: 'Geist Mono', monospace; font-weight: 600; letter-spacing: -.02em;
+.gbwm-odo { font-family: 'IBM Plex Mono', monospace; font-weight: 600; letter-spacing: -.02em;
   font-size: 2.2rem; color: var(--ink); line-height: 1.04; font-variant-numeric: tabular-nums; }
 .gbwm-odo .cur { font-size: 1.05rem; color: var(--muted-strong); margin-right: 6px; font-weight: 500; }
 
@@ -220,12 +221,12 @@ hr { border-color: var(--line) !important; margin: 1.1rem 0; }
 .gbwm-verdict { border: 1px solid rgba(28,107,80,.30); background: rgba(28,107,80,.07);
   border-radius: 14px; padding: 18px 22px; box-shadow: var(--shadow);
   display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
-.gbwm-verdict .cap { font-family: 'Geist Mono', monospace; font-size: .68rem; letter-spacing: .18em;
+.gbwm-verdict .cap { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; letter-spacing: .18em;
   text-transform: uppercase; color: var(--muted-strong); margin-bottom: 6px; }
-.gbwm-verdict .big { font-family: 'Geist Mono', monospace; font-weight: 600; font-size: 2.7rem;
+.gbwm-verdict .big { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 2.7rem;
   line-height: 1; color: var(--accent); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .gbwm-verdict .body { flex: 1 1 320px; min-width: 260px; line-height: 1.55; }
-.gbwm-verdict .deltas { font-family: 'Geist Mono', monospace; font-size: .78rem;
+.gbwm-verdict .deltas { font-family: 'IBM Plex Mono', monospace; font-size: .78rem;
   color: var(--muted-strong); letter-spacing: .02em; }
 
 /* ---- stocks/cash split bar for the live decision demo ---- */
@@ -329,6 +330,112 @@ def next_step(target: str, blurb: str, key: str):
 
 
 # --------------------------------------------------------------------------- #
+# === source-track system (Paper / My extension / Evidence / Context) ========= #
+# Mirrors the deck: every page is tagged by what it shows relative to the research,
+# and a progress rail maps all 9 pages so you can always see where the paper is.
+st.markdown(
+    "<style>"
+    ".gbwm-track{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px 5px 10px;border:1px solid var(--line);border-radius:999px;color:var(--ink);}"
+    ".gbwm-track .tdot{width:9px;height:9px;border-radius:3px;background:var(--muted-strong);}"
+    ".t-paper .tdot{background:oklch(0.60 0.085 220);}.t-extension .tdot{background:oklch(0.73 0.15 65);}.t-evidence .tdot{background:oklch(0.60 0.13 156);}.t-context .tdot{background:#b3aa98;}"
+    ".gbwm-rail{display:flex;gap:4px;margin:.55rem 0 .15rem;align-items:flex-end;}"
+    ".gbwm-rail .seg{flex:1;height:7px;border-radius:3px;opacity:.36;}"
+    ".gbwm-rail .seg.cur{opacity:1;height:10px;}"
+    ".gbwm-rail .seg.gap{margin-right:16px;}"
+    ".gbwm-rail .seg.t-paper{background:oklch(0.60 0.085 220);}.gbwm-rail .seg.t-extension{background:oklch(0.73 0.15 65);}.gbwm-rail .seg.t-evidence{background:oklch(0.60 0.13 156);}.gbwm-rail .seg.t-context{background:#bcb6a8;}"
+    ".gbwm-railnow{display:flex;align-items:center;gap:10px;margin:.05rem 0 .4rem;}"
+    ".gbwm-railnow .rn{color:var(--muted-strong);font-size:.85rem;}"
+    ".gbwm-railnow .rpos{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.12em;color:var(--muted-strong);}"
+    "</style>",
+    unsafe_allow_html=True,
+)
+
+PAGE_TRACK = {
+    "how": ("context", "Context", "the idea, in plain words"),
+    "brain": ("paper", "Paper", "the method — from Dixon & Halperin"),
+    "plan": ("context", "Context", "a tool you drive"),
+    "bank": ("context", "Context", "a sandbox you play"),
+    "journey": ("extension", "My extension", "regime-aware, step by step"),
+    "compare": ("evidence", "Evidence", "thousands of fair runs"),
+    "history": ("evidence", "Evidence", "real history · no look-ahead"),
+    "multi": ("evidence", "Evidence", "real history · four assets"),
+    "coverage": ("context", "Context", "proposal → code"),
+}
+
+
+def progress_rail(current):
+    """Compact map: the 9 pages coloured by source-track, current one lit, so you
+    always know where you are and where the paper sits (blue = the paper)."""
+    order = [k for _, pages in PHASES for k, _ in pages]
+    ends = {pages[-1][0] for _, pages in PHASES}
+    segs = []
+    for k in order:
+        tk = PAGE_TRACK.get(k, ("context",))[0]
+        cls = "seg t-" + tk
+        if k == current:
+            cls += " cur"
+        if k in ends and k != order[-1]:
+            cls += " gap"
+        segs.append('<span class="' + cls + '"></span>')
+    kind, label, note = PAGE_TRACK.get(current, ("context", "Context", ""))
+    pos = order.index(current) + 1 if current in order else 1
+    st.markdown(
+        '<div class="gbwm-rail">' + "".join(segs) + "</div>"
+        '<div class="gbwm-railnow">'
+        '<span class="gbwm-track t-' + kind + '"><span class="tdot"></span>' + label + "</span>"
+        '<span class="rn">' + note + "</span>"
+        '<span class="rpos">' + str(pos) + " / " + str(len(order)) + "</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+st.markdown(
+    "<style>"
+    ".gbwm-guide{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin:.1rem 0 .7rem;font-size:.95rem;line-height:1.45;}"
+    ".gbwm-guide .g-story{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-strong);border:1px solid var(--line);border-radius:999px;padding:3px 10px;}"
+    ".gbwm-guide .g-try{color:var(--ink);}"
+    ".gbwm-guide .g-try b{color:var(--accent);font-weight:600;}"
+    "</style>",
+    unsafe_allow_html=True,
+)
+
+DEMO_GUIDE = {
+    "how":      ("Deck Ch.1 \u00b7 the problem, made touchable",
+                 "drag the weather to \u26c8\ufe0f Stormy and watch the brain\u2019s number drop \u2014 that one moving number is the whole idea."),
+    "brain":    ("Deck Ch.3 \u00b7 the paper\u2019s method (Dixon & Halperin)",
+                 "switch the market weather and watch the heat-map change \u2014 proof the policy depends on the regime."),
+    "plan":     ("Play \u00b7 your own numbers",
+                 "change the goal amount on the left and watch your chance of reaching it update."),
+    "bank":     ("Play \u00b7 a bank you control",
+                 "open a wallet, then press a few months and watch the brain invest, with a log of every move."),
+    "journey":  ("Deck Ch.4 \u00b7 my extension, step by step",
+                 "press play and watch the stocks % rise in calm weather and fall in storms."),
+    "compare":  ("Deck Ch.5 \u00b7 the evidence (4,000 futures)",
+                 "find the longest green bar \u2014 that plan reaches the goal most often."),
+    "history":  ("Deck Ch.5 \u00b7 the honest test on real history",
+                 "press \u2018Run the time machine\u2019, then read the drawdown column \u2014 smaller is calmer."),
+    "multi":    ("Deck Ch.5 \u00b7 the honest test, four investments",
+                 "press \u2018Split my money live\u2019 and watch it move into safe havens during crashes."),
+    "coverage": ("Deck Ch.6 \u00b7 every slide \u2192 code",
+                 "pick any claim from the deck and see which page of this app proves it."),
+}
+
+
+def demo_guide(page):
+    """One kid-simple line per page: where it sits in the deck's story + the
+    single thing to touch. Makes the demo self-guided and deck-coherent."""
+    g = DEMO_GUIDE.get(page)
+    if not g:
+        return
+    story, action = g
+    st.markdown(
+        '<div class="gbwm-guide"><span class="g-story">' + story + "</span>"
+        '<span class="g-try"><b>\U0001f449 Try this:</b> ' + action + "</span></div>",
+        unsafe_allow_html=True,
+    )
+
+
 def money(x): return f"${x:,.0f}"
 def pct(x): return f"{x * 100:.0f}%"
 def ntd(x): return f"NT$ {x:,.0f}"
@@ -576,8 +683,19 @@ def goal_chance_chart(pgoals):
 
 
 # --------------------------------------------------------------------------- #
-st.sidebar.title("Goal Planner")
-st.sidebar.caption("Maximize the *chance of reaching* a money goal — Regime-Aware GBWM with RL.")
+st.sidebar.markdown(
+    "<style>"
+    ".gbwm-sidehead{margin:.1rem 0 .55rem;}"
+    ".gbwm-sidehead .eb{font-family:'IBM Plex Mono',monospace;font-size:.64rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-strong);}"
+    ".gbwm-sidehead .ti{font-family:'Hanken Grotesk',sans-serif;font-weight:600;font-size:1.78rem;letter-spacing:-.03em;line-height:1.0;margin-top:5px;color:var(--ink);}"
+    ".gbwm-sidehead .ti .se{font-family:'Newsreader',serif;font-style:italic;font-weight:400;color:var(--accent);}"
+    ".gbwm-sidehead .su{font-size:.85rem;color:var(--muted-strong);margin-top:7px;line-height:1.45;}"
+    "</style>"
+    "<div class='gbwm-sidehead'><div class='eb'>Goal Planner</div>"
+    "<div class='ti'>Your <span class='se'>numbers</span>.</div>"
+    "<div class='su'>Set them once \u2014 they steer every plan.</div></div>",
+    unsafe_allow_html=True,
+)
 st.sidebar.info("New here? Start at **Learn › How it works** and follow the **Next** button at the "
                 "bottom of each page — it walks you through the whole story.")
 for k, v in {"initial": 100_000, "target": 250_000, "horizon": 20, "contribution": 500}.items():
@@ -650,6 +768,23 @@ if "_goto" in st.session_state:  # a "Next" / "Open" button asked to navigate
         st.session_state[f"nav_page_{PAGE_PHASE[_tgt]}"] = PAGE_LABEL[_tgt]
 
 st.session_state.setdefault("nav_phase", PAGE_PHASE[st.session_state.page])
+st.markdown(
+    "<style>"
+    ".gbwm-masthead{background:radial-gradient(120% 150% at 86% -35%,rgba(216,150,72,.34),transparent 55%),linear-gradient(100deg,#160f08 0%,#20160d 58%,#10201e 100%);color:#f3ede1;border-radius:18px;padding:24px 28px;margin:.2rem 0 1.2rem;"
+    "display:flex;align-items:baseline;justify-content:space-between;gap:14px 24px;flex-wrap:wrap;"
+    "box-shadow:0 22px 54px -38px rgba(0,0,0,.55);}"
+    ".gbwm-masthead .mh-brand{font-family:'Hanken Grotesk',sans-serif;font-weight:600;font-size:1.95rem;letter-spacing:-.022em;line-height:1.05;}"
+    ".gbwm-masthead .mh-grad{background:linear-gradient(100deg,#fff 0%,#fff 28%,oklch(0.80 0.13 72) 60%,oklch(0.74 0.09 220) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}"
+    ".gbwm-masthead .mh-serif{font-family:'Newsreader',serif;font-style:italic;font-weight:400;color:oklch(0.74 0.09 220);}"
+    ".gbwm-masthead .mh-tag{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#a99e88;}"
+    "</style>"
+    "<div class='gbwm-masthead'>"
+    "<div class='mh-brand'><span class='mh-grad'>Regime-Aware</span> "
+    "<span class='mh-serif'>goal-based</span> wealth management</div>"
+    "<div class='mh-tag'>CME 241 \u00b7 RL \u00d7 goal-based investing \u00b7 proven on real history</div>"
+    "</div>",
+    unsafe_allow_html=True,
+)
 phase = st.radio("Section", [ph for ph, _ in PHASES], key="nav_phase",
                  horizontal=True, label_visibility="collapsed")
 _pp = PHASE_PAGES[phase]
@@ -662,29 +797,27 @@ _sel = st.radio("Page", [lbl for _, lbl in _pp], key=f"nav_page_{phase}",
 page = _key_by_label[_sel]
 st.session_state["page"] = page
 st.caption(PHASE_BLURB[phase])
+progress_rail(page)
+demo_guide(page)
 
 # --------------------------------------------------------------------------- 0
 # 📖 How it works — the guide / reading order (ELI10).
 # --------------------------------------------------------------------------- #
 if page == "how":
-    eyebrow("Start here · what this project is · plain language")
     st.markdown('<h1>Watch a computer learn to reach a <span class="gbwm-serif">money goal</span>.</h1>',
                 unsafe_allow_html=True)
     intro("Read me first",
-          "This app demonstrates one idea: **goal-based wealth management with reinforcement learning "
-          "(RL)**. A computer plays the 'reach-your-goal' game thousands of times and learns *how much "
-          "to risk each month* from three things: **time left**, the **gap to your goal**, and the "
-          "**market 'weather'** (sunny, calm, choppy or stormy).",
-          ["Everything here is a **simulation with fake money** — never real money, not financial advice.",
-           "Wherever the learned brain makes a decision you'll see the <span class='gbwm-rl'>RL</span> badge.",
+          "One idea: the computer plays the *reach-your-goal* game thousands of times and learns "
+          "**how much to risk each month** from your **time left**, your **gap to the goal**, and the "
+          "**market weather**.",
+          ["Wherever the brain makes a decision you'll see the <span class='gbwm-rl'>RL</span> badge.",
            "It's the working proof of <a href='https://orosergio.github.io/RegimeAwareGBWM/' "
            "target='_blank'>the 2-minute pitch deck</a>."])
 
     # ---- the centerpiece: poke the actual learned policy, live --------------- #
     st.subheader("Try it — make the brain decide, right now")
-    st.caption("This queries the **actual learned policy** (not a script). Set a situation; see how much "
-               "it would risk. Change **only the weather** and watch the answer move — that one number "
-               "moving is the regime-aware part, the project's whole point.")
+    st.caption("Queries the **actual learned policy** — change **only the weather** and watch the "
+               "number move. That moving number is the regime-aware part, the whole point.")
     surf_by_reg, surf_blind, w_grid = policy_surfaces(key)
     _wopts = list(surf_by_reg)
     demo_regime = st.radio("Market weather right now", _wopts, index=len(_wopts) - 1,
@@ -1709,8 +1842,6 @@ if page == "history":
                                "hurts the all-in plan. The regime-aware plan's worst-drop bar stays low "
                                "even then, because it cut risk once the storm began — *when* you start "
                                "matters far less with the smart plan.")
-            st.caption("Educational simulation — costs/taxes simplified, single risky asset, monthly "
-                       "rebalancing. **Not financial advice.**")
     elif not st.session_state.get("rd_args"):
         st.info("Pick a market and press **Run the time machine**.")
     next_step("multi", "Same honest test, but the brain juggles four assets at once — stocks, bonds "
@@ -1863,8 +1994,6 @@ if page == "multi":
                     "doesn't mask the crashes.\n"
                     "- **The belief is causal**: it rises *after* the fall happens, never before.\n"
                     f"- **Regimes {mode_txt}**.")
-            st.caption("Educational simulation — costs/taxes simplified, monthly rebalancing. "
-                       "**Not financial advice.**")
     elif not st.session_state.get("ma_args"):
         st.info("Adjust your numbers and press **Split my money live**.")
     next_step("coverage", "Last stop: how every slide of the proposal became the code you just used.",
